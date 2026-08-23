@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: benefit4j-it
+  datasource:
+    url: jdbc:postgresql://localhost:5432/benefit4j?stringtype=unspecified
+    username: admin
+    password: test@2026
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: false          # IT 不跑 Flyway (用 app 建好的 schema; Flyway 由 app 验证, 避免 Druid Wall 拦截)
+
+framework4j:
+  redis:
+    enabled: true
+    datasources:
+      default:
+        host: localhost
+        port: 6379
+  datasource:
+    enabled: true
+    datasources:
+      default:
+        url: jdbc:postgresql://localhost:5432/benefit4j?stringtype=unspecified
+        username: admin
+        password: test@2026
+        mybatisPlusPlugins:
+          optimisticLock: true
+          pagination: true
+          blockAttack: true
+          dbType: POSTGRE_SQL
+  access-token:
+    enabled: true
+    redis-name: default
+    secret-key: changeme_super_secret_key_32_chars_long
+    hash-salt: salt
+    policies:
+      APP:
+        key: [appid]
+        expire-time: 7200
+      OPS:
+        key: [appid]
+        expire-time: 7200
+  signature:
+    enabled: false
+  sensitive:
+    enabled: true
+    encryption-key: 12345678901234567890123456789012
+  idempotency:
+    enabled: true
+    header-name: Idempotency-Key
+    key-prefix: benefit4j:idem
+    ttl-seconds: 172800
+    body-hash-required: true
+    redis-name: default
+  audit:
+    enabled: true
+    table-name: ubmp_audit_log   # 关键: 用库里已有的表, 避免事务被标记 rollback-only
+  rate-limit:
+    enabled: true
+    redis-name: default
+    key-prefix: benefit4j:rl
+    default-scope: APP
+    path-patterns: ["/benefit/api/v1/runtime/**"]
+
+benefit4j:
+  tenant:
+    mode: local
+  ops:
+    enable-api: true
+  runtime:
+    enable-api: true
+  platform:
+    enable-api: true

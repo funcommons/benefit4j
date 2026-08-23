@@ -1,0 +1,139 @@
+server:
+  port: 9200
+  shutdown: graceful                # 优雅停机: SIGTERM 后处理完在途请求再退出
+
+spring:
+  application:
+    name: benefit4j-backend
+  profiles:
+    active: dev
+  lifecycle:
+    timeout-per-shutdown-phase: 30s   # 优雅停机最多等 30s
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true         # 已有表时 baseline (现有 schema 视为基线)
+    baseline-version: '1.2.1'         # 现有 schema 作为 1.2.1 基线, V1.2.2+ 才执行
+    validate-on-migrate: true
+    # 独立 datasource 绕过 Druid Wall (Wall 拦 Flyway 脚本的注释/部分索引 WHERE 等 PG 语法)
+    url: jdbc:postgresql://localhost:5432/benefit4j?stringtype=unspecified
+    user: admin
+    password: test@2026
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/benefit4j?stringtype=unspecified
+    username: admin
+    password: test@2026
+    driver-class-name: org.postgresql.Driver
+
+framework4j:
+  redis:
+    enabled: true
+    datasources:
+      default:
+        host: localhost
+        port: 6379
+        lettuce:
+          pool:
+            max-active: 50          # 默认 8 太小, 生产 50
+            max-idle: 20
+            min-idle: 5
+  datasource:
+    enabled: true
+    datasources:
+      default:
+        url: jdbc:postgresql://localhost:5432/benefit4j?stringtype=unspecified
+        username: admin
+        password: test@2026
+        druid:
+          initial-size: 10
+          min-idle: 10
+          max-active: 50          # 默认 20 太小, 生产 50
+          max-wait: 1000           # 获取连接超时 1s (默认 60s 太长)
+          test-while-idle: true
+          validation-query: SELECT 1
+        mybatisPlusPlugins:
+          optimisticLock: true
+          pagination: true
+          blockAttack: true
+          dbType: POSTGRE_SQL
+    # SQL 追踪: Druid Filter 注入 /*traceid=xxx*/ 注释, 慢 SQL 定位 (默认 matchIfMissing=true, 显式配明确化)
+    sql-tracing:
+      enabled: true
+      mode: ALL        # DISABLED / WRITE_ONLY / ALL
+  access-token:
+    enabled: true
+    redis-name: default
+    secret-key: ${JWT_SECRET:changeme_super_secret_key_32_chars_long}
+    hash-salt: ${HASH_SALT:salt}
+    exclude-path-patterns: ["/benefit/api/v1/auth/token", "/benefit/api/v1/ops/health", "/swagger-ui/**", "/v3/api-docs/**"]
+    policies:
+      APP:
+        key: [app_id]
+        expire-time: 7200
+        auto-renew: true
+        renew-increment: 1800
+      OPS:
+        key: [app_id]
+        expire-time: 7200
+  signature:
+    enabled: true
+    timestamp-tolerance-ms: 300000      # ±5min
+    nonce-ttl-seconds: 600              # nonce 10min 防重放
+    nonce-key-prefix: benefit4j:sig:nonce
+    redis-name: default
+    path-patterns: ["/benefit/api/v1/runtime/**"]   # 对外 runtime API 强制签名
+    exclude-path-patterns: []
+  sensitive:
+    enabled: true
+    encryption-key: ${AES_KEY:12345678901234567890123456789012}
+  idempotency:
+    enabled: true
+    header-name: Idempotency-Key        # 三方传 UUID v4
+    key-prefix: benefit4j:idem
+    ttl-seconds: 172800                # 48h
+    body-hash-required: true           # 防同 key 不同 body
+    redis-name: default
+    # 只校验资金类写操作, 重复提交返回 409
+    path-patterns:
+      - "/benefit/api/v1/tenant/subscriptions"
+      - "/benefit/api/v1/tenant/subscriptions/*/disable"
+      - "/benefit/api/v1/tenant/compensations"
+      - "/benefit/api/v1/tenant/consumes/*/refund"
+      - "/benefit/api/v1/runtime/subscriptions"
+      - "/benefit/api/v1/runtime/subscriptions/cancel"
+      - "/benefit/api/v1/runtime/consumes/**"
+      - "/benefit/api/v1/runtime/refunds"
+      - "/benefit/api/v1/platform/applications/*/reset-secret"
+  audit:
+    enabled: true
+    table-name: ubmp_audit_log
+  rate-limit:
+    enabled: true             # 压测已恢复
+    redis-name: default
+    key-prefix: benefit4j:rl
+    default-scope: APP        # 按 App 维度限流 (从 TokenContext 取 app_id)
+    default-limit: 100
+    default-window: 1m
+    default-algorithm: SLIDING_WINDOW
+    path-patterns: ["/benefit/api/v1/runtime/**"]
+    whitelist-paths: ["/benefit/api/v1/auth/token"]
+
+benefit4j:
+  security:
+    platform:
+      client-id: ${PLATFORM_CLIENT_ID:PLATFORM}
+      client-secret: ${PLATFORM_CLIENT_SECRET:fvUQ54yPgrMg2v2X}
+  migration:
+    app-secret-encrypt: true   # 临时开启, 迁移完关闭
+
+
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
