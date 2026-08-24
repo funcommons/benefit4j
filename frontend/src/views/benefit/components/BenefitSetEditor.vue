@@ -261,7 +261,7 @@
         </span>
         <span v-else />
         <div class="composer-footer-actions">
-          <FcButton type="primary" @click="handleCancel">{{ t('common.confirm') }}</FcButton>
+          <FcButton type="primary" @click="readonly ? handleCancel() : handleSubmit()">{{ t('common.confirm') }}</FcButton>
         </div>
       </div>
     </template>

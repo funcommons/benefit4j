@@ -56,7 +56,7 @@
                 <span v-for="r in row.refs.slice(0, 3)" :key="r.item_id" class="ref-chip">
                   {{ r.item_id }}
                 </span>
-                <FcTooltip v-if="row.refs.length > 3" :content="row.refs.slice(3).map(r => r.item_id).join('\n')">
+                <FcTooltip v-if="row.refs.length > 3" :content="row.refs.slice(3).map((r: any) => r.item_id).join('\n')">
                   <span class="ref-more">+{{ row.refs.length - 3 }}</span>
                 </FcTooltip>
               </div>

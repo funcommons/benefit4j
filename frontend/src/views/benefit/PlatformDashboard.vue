@@ -190,7 +190,7 @@ const fetchAll = async () => {
     ])
     if (s.status === 'fulfilled') stats.value = s.value.data
     if (a.status === 'fulfilled') apps.value = a.value.data || []
-    if (it.status === 'fulfilled') recentItems.value = (it.value.data || []).slice(0, 6)
+    if (it.status === 'fulfilled') recentItems.value = (it.value.data?.list || []).slice(0, 6)
   } catch { /* ignore */ } finally {
     loading.value = false
   }

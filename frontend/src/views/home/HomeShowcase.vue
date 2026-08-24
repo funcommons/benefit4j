@@ -32,7 +32,7 @@
             </div>
 
             <ul class="showcase-card__benefits">
-              <li v-for="(b, idx) in item.benefits" :key="idx" class="showcase-card__benefit">
+              <li v-for="(_b, idx) in item.benefits" :key="idx" class="showcase-card__benefit">
                 <i class="ri-check-line" />
                 <span>{{ t(`home.showcase.${item.id}.b${idx + 1}`) }}</span>
               </li>

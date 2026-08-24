@@ -179,7 +179,7 @@ import {
 import type { BenefitSet, PlatformBenefitSet } from '@/api/benefitSet'
 import { getItemTemplates } from '@/api/benefitItemTemplate'
 import { getBenefitItems } from '@/api/benefitItem'
-import type { ItemTemplate } from '@/types/benefit'
+import type { ItemTemplate, GlobalTemplate } from '@/types/benefit'
 import {
   FcButton, FcSection, FcSectionHeader, FcFilterBar,
   FcTooltip, FcEmpty, FcTag, FcSelect, FcPagination, toast,
@@ -239,7 +239,7 @@ const fetchItemPool = async () => {
 
 // === 详情对话框 (read-only) ===
 const detailVisible = ref(false)
-const detailForm = ref<BenefitSet & { refs?: any[]; status?: string }>({
+const detailForm = ref<GlobalTemplate>({
   name: '', duration: 0, duration_unit: 'month', quota: 0, priority: 0,
   refresh_cycle: 0, refresh_cycle_unit: 'month', refs: [], status: 'ACTIVE',
 })
@@ -247,6 +247,7 @@ const detailForm = ref<BenefitSet & { refs?: any[]; status?: string }>({
 const openDetailDialog = (row: BenefitSet) => {
   detailForm.value = {
     ...row,
+    name: row.name || '',
     duration: row.duration || 0,
     duration_unit: row.duration_unit || 'month',
     quota: row.quota || 0,
@@ -269,7 +270,7 @@ const openDetailDialog = (row: BenefitSet) => {
 const formVisible = ref(false)
 const submitting = ref(false)
 const editingId = ref<string | null>(null)
-const form = ref<BenefitSet & { refs?: any[] }>({
+const form = ref<GlobalTemplate & { timing_mode?: string }>({
   name: '', duration: 0, duration_unit: 'month', quota: 0, priority: 0,
   refresh_cycle: 0, refresh_cycle_unit: 'month', timing_mode: 'RENEWAL',
   refs: [],
@@ -290,6 +291,7 @@ const openEditDialog = (row: BenefitSet) => {
   editingId.value = row.id!
   form.value = {
     ...row,
+    name: row.name || '',
     duration: row.duration || 0,
     duration_unit: row.duration_unit || 'month',
     quota: row.quota || 0,

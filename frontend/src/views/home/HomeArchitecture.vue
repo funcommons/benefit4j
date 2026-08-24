@@ -24,7 +24,7 @@
               v-for="item in layer.items"
               :key="item"
               size="sm"
-              :color="layer.tone"
+              :color="toTagColor(layer.tone)"
             >{{ item }}</FcTag>
           </div>
         </div>
@@ -61,6 +61,10 @@ import { FcSectionHeader, FcTag } from '@/components/sdk'
 defineOptions({ name: 'HomeArchitecture' })
 
 const { t } = useI18n()
+
+// FcTag color 无 'info' (TagColor 联合), 但 CSS class 需保留 info 样式 → 映射 info→gray
+type TagColor = 'primary' | 'gray' | 'success' | 'warning' | 'danger' | 'brand'
+const toTagColor = (tone: string): TagColor => (tone === 'info' ? 'gray' : tone) as TagColor
 
 const layers = [
   { id: 'access', tone: 'primary' as const, items: ['iframe 嵌入', 'REST API', 'Web SDK', 'postMessage'] },

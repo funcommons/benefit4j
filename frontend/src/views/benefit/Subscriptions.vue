@@ -336,8 +336,8 @@ const loadBuckets = async (subscribeId: string) => {
   }
 }
 
-const onExpandChange = async (_row: any, expandedRows: any[]) => {
-  const ids = (expandedRows || []).map(r => r.subscribe_id).filter(Boolean)
+const onExpandChange = async (_row: any, expandedList: any[]) => {
+  const ids = (expandedList || []).map(r => r.subscribe_id).filter(Boolean)
   expandedRows.value = ids
   for (const id of ids) {
     if (!bucketMap[id]) await loadBuckets(id)

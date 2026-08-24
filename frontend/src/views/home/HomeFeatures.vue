@@ -24,7 +24,7 @@
               v-for="tag in feat.tags"
               :key="tag"
               size="sm"
-              :color="feat.tone"
+              :color="toTagColor(feat.tone)"
             >{{ tag }}</FcTag>
           </div>
         </FcSectionCard>
@@ -47,6 +47,10 @@ import { FcSectionHeader, FcSectionCard, FcTag } from '@/components/sdk'
 defineOptions({ name: 'HomeFeatures' })
 
 const { t } = useI18n()
+
+// FcTag color 无 'info' (TagColor 联合), CSS class 需保留 info 样式 → 映射 info→gray
+type TagColor = 'primary' | 'gray' | 'success' | 'warning' | 'danger' | 'brand'
+const toTagColor = (tone: string): TagColor => (tone === 'info' ? 'gray' : tone) as TagColor
 
 const features = [
   { id: 'subscribe',  icon: 'ri-vip-crown-2-line', tone: 'primary',  tags: ['订阅', '自动续费', '到期'] },
