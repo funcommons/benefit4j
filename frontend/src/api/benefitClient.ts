@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosError, AxiosResponse } from 'axios'
 import { v4 as uuidv4 } from 'uuid'
-import { getOrCreateTraceId } from './request'
+import { getOrCreateTraceId } from '@/utils/trace'
 import { authBus } from '@/utils/authBus'
 import { buildSignatureHeaders, isRuntimeUrl } from '@/utils/signature'
 

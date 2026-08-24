@@ -26,7 +26,7 @@ export interface SignatureHeaders {
 /** runtime 域路径需签名 (与后端 framework4j.signature.path-patterns 一致) */
 export function isRuntimeUrl(url: string): boolean {
   // config.url 可能无前导 / (如 'benefit/api/v1/runtime/...'), 规范化后匹配
-  const path = url.split('?')[0]
+  const path = url.split('?')[0] ?? ''
   const norm = path.startsWith('/') ? path : '/' + path
   return norm.includes('/benefit/api/v1/runtime/')
 }
@@ -55,7 +55,7 @@ export function buildSignatureHeaders(
 
 /** 规范化 path: 去 query, 确保前导 / (后端 getRequestURI 含前导 /) */
 function normalizePath(url: string): string {
-  const path = url.split('?')[0]
+  const path = url.split('?')[0] ?? ''
   return path.startsWith('/') ? path : '/' + path
 }
 

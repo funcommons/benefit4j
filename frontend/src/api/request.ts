@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse,
 import { v4 as uuidv4 } from 'uuid'
 import { ApiError, HTTP_STATUS, ApiErrorCode } from '@/api/errorCodes'
 import type { ApiFieldError } from '@/api/errorCodes'
+import { getOrCreateTraceId, TRACE_ID_STORAGE_KEY } from '@/utils/trace'
 import router from '@/router'
 import i18n from '@/locales'
 import { logger } from '@/utils'
@@ -14,7 +15,6 @@ const t = i18n.global.t
 const BASE_URL = ''
 const TIMEOUT = 30000
 
-const TRACE_ID_STORAGE_KEY = 'aigc:trace-id'
 const WRITE_METHODS = new Set(['post', 'put', 'patch', 'delete'])
 
 // 鉴权相关白名单 (不注入 Bearer Token, 不触发 401 刷新)
@@ -25,20 +25,6 @@ const AUTH_PUBLIC_PATHS = new Set([
   '/api/v1/auth/captcha/verify',
   '/api/v1/auth/capabilities',
 ])
-
-export function getOrCreateTraceId(): string {
-  let traceId = ''
-  try {
-    traceId = sessionStorage.getItem(TRACE_ID_STORAGE_KEY) || ''
-  } catch {
-    // sessionStorage 不可用 (SSR / 隐私模式), 退化为每次新生成
-  }
-  if (!traceId) {
-    traceId = uuidv4()
-    try { sessionStorage.setItem(TRACE_ID_STORAGE_KEY, traceId) } catch { /* noop */ }
-  }
-  return traceId
-}
 
 /** 懒加载 userStore (避免循环依赖: store 引用 api, api 引用 store) */
 let userStoreGetter: (() => { accessToken: string; refreshToken: string; refreshAccessToken: () => Promise<string>; clearAuth: () => void; hasToken: boolean }) | null = null

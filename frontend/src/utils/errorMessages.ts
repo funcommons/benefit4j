@@ -36,22 +36,6 @@ const CODE_TO_KEY: Record<number, string> = {
   [ApiErrorCode.RATE_LIMIT_EXCEEDED]: 'ux.error.RATE_LIMIT_EXCEEDED',
   [ApiErrorCode.DUPLICATE_SUBMISSION]: 'ux.error.DUPLICATE_SUBMISSION',
   [ApiErrorCode.THIRD_PARTY_ERROR]: 'ux.error.THIRD_PARTY_ERROR',
-
-  [ApiErrorCode.INSUFFICIENT_CREDITS]: 'ux.error.INSUFFICIENT_CREDITS',
-  [ApiErrorCode.WORK_NOT_FOUND]: 'ux.error.WORK_NOT_FOUND',
-  [ApiErrorCode.WORK_STATUS_INVALID]: 'ux.error.WORK_STATUS_INVALID',
-  [ApiErrorCode.MODEL_NOT_FOUND]: 'ux.error.MODEL_NOT_FOUND',
-  [ApiErrorCode.MODEL_UNAVAILABLE]: 'ux.error.MODEL_UNAVAILABLE',
-  [ApiErrorCode.SHARE_NOT_FOUND]: 'ux.error.SHARE_NOT_FOUND',
-  [ApiErrorCode.COMMENT_NOT_FOUND]: 'ux.error.COMMENT_NOT_FOUND',
-  [ApiErrorCode.GROUP_NOT_FOUND]: 'ux.error.GROUP_NOT_FOUND',
-  [ApiErrorCode.GROUP_LIMIT_EXCEEDED]: 'ux.error.GROUP_LIMIT_EXCEEDED',
-  [ApiErrorCode.ALREADY_JOINED]: 'ux.error.ALREADY_JOINED',
-  [ApiErrorCode.NOT_GROUP_OWNER]: 'ux.error.NOT_GROUP_OWNER',
-  [ApiErrorCode.NOT_GROUP_MEMBER]: 'ux.error.NOT_GROUP_MEMBER',
-  [ApiErrorCode.CANNOT_REMOVE_OWNER]: 'ux.error.CANNOT_REMOVE_OWNER',
-  [ApiErrorCode.INVITE_CODE_INVALID]: 'ux.error.INVITE_CODE_INVALID',
-  [ApiErrorCode.INVITE_CODE_EXPIRED]: 'ux.error.INVITE_CODE_EXPIRED',
 }
 
 /**
