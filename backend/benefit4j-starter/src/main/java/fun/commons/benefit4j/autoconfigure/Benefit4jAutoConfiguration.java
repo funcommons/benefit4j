@@ -84,52 +84,46 @@ public class Benefit4jAutoConfiguration {
     }
 
     // ==== Remote Mode (跨进程调用, 业务方需配 benefit4j.{域}.mode=remote + remote-url) ====
-    @Bean
-    @ConditionalOnMissingBean
-    public org.springframework.web.client.RestTemplate benefit4jRestTemplate() {
-        return new org.springframework.web.client.RestTemplate();
-    }
+    // 默认 RestTemplate + HttpTransport 由 framework4j-transport 的 TransportAutoConfiguration 提供,
+    // 此处仅 remote 模式用 AuthenticatedHttpTransport 覆盖 (S2S JWT + HMAC 签名)
 
+    // remote 模式配了 remote-app-id → 用 AuthenticatedHttpTransport 覆盖默认 (自动 S2S JWT + HMAC 签名)
+    // @Primary 优先于 framework4j-transport 的默认 RestTemplateHttpTransport
     @Bean
-    @ConditionalOnMissingBean(fun.commons.benefit4j.transport.HttpTransport.class)
-    public fun.commons.benefit4j.transport.HttpTransport benefit4jHttpTransport(org.springframework.web.client.RestTemplate restTemplate) {
-        return new fun.commons.benefit4j.transport.RestTemplateHttpTransport(restTemplate);
-    }
-
-    // remote 模式配了 remote-app-id → 用 AuthenticatedHttpTransport (自动 S2S JWT + HMAC 签名)
-    @Bean
+    @org.springframework.context.annotation.Primary
     @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "benefit4j.runtime", name = "remote-app-id")
-    @ConditionalOnMissingBean(fun.commons.benefit4j.transport.HttpTransport.class)
-    public fun.commons.benefit4j.transport.HttpTransport benefit4jAuthenticatedHttpTransport(
-            fun.commons.benefit4j.transport.RestTemplateHttpTransport restTemplateTransport,
+    public fun.commons.framework4j.transport.HttpTransport benefit4jAuthenticatedHttpTransport(
+            org.springframework.web.client.RestTemplate restTemplate,
             org.springframework.beans.factory.ObjectProvider<fun.commons.framework4j.accesstoken.core.AccessTokenGenerator> tokenGeneratorProvider,
             Benefit4jProperties properties,
             com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+        fun.commons.framework4j.transport.RestTemplateHttpTransport delegate =
+                new fun.commons.framework4j.transport.RestTemplateHttpTransport(restTemplate);
         return new fun.commons.benefit4j.transport.AuthenticatedHttpTransport(
-                restTemplateTransport, tokenGeneratorProvider, properties, objectMapper);
+                delegate, tokenGeneratorProvider, properties, objectMapper);
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "benefit4j.runtime", name = "mode", havingValue = "remote")
-    public BenefitRuntimeClient remoteBenefitRuntimeClient(Benefit4jProperties properties, fun.commons.benefit4j.transport.HttpTransport transport) {
+    public BenefitRuntimeClient remoteBenefitRuntimeClient(Benefit4jProperties properties, fun.commons.framework4j.transport.HttpTransport transport) {
         return new RemoteBenefitRuntimeClient(properties, transport);
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "benefit4j.tenant", name = "mode", havingValue = "remote")
-    public BenefitTenantClient remoteBenefitTenantClient(Benefit4jProperties properties, fun.commons.benefit4j.transport.HttpTransport transport) {
+    public BenefitTenantClient remoteBenefitTenantClient(Benefit4jProperties properties, fun.commons.framework4j.transport.HttpTransport transport) {
         return new RemoteBenefitTenantClient(properties, transport);
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "benefit4j.platform", name = "mode", havingValue = "remote")
-    public BenefitPlatformClient remoteBenefitPlatformClient(Benefit4jProperties properties, fun.commons.benefit4j.transport.HttpTransport transport) {
+    public BenefitPlatformClient remoteBenefitPlatformClient(Benefit4jProperties properties, fun.commons.framework4j.transport.HttpTransport transport) {
         return new RemoteBenefitPlatformClient(properties, transport);
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "benefit4j.ops", name = "mode", havingValue = "remote")
-    public BenefitOpsClient remoteBenefitOpsClient(Benefit4jProperties properties, fun.commons.benefit4j.transport.HttpTransport transport) {
+    public BenefitOpsClient remoteBenefitOpsClient(Benefit4jProperties properties, fun.commons.framework4j.transport.HttpTransport transport) {
         return new RemoteBenefitOpsClient(properties, transport);
     }
 }

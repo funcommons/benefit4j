@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fun.commons.benefit4j.properties.Benefit4jProperties;
 import fun.commons.framework4j.accesstoken.core.AccessTokenGenerator;
 import fun.commons.framework4j.signature.util.SignatureUtil;
+import fun.commons.framework4j.transport.HttpTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;

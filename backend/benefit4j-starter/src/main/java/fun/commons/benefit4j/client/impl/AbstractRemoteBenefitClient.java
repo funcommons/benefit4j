@@ -1,7 +1,7 @@
 package fun.commons.benefit4j.client.impl;
 
 import fun.commons.benefit4j.properties.Benefit4jProperties;
-import fun.commons.benefit4j.transport.HttpTransport;
+import fun.commons.framework4j.transport.HttpTransport;
 import org.springframework.util.Assert;
 
 import java.net.URLEncoder;

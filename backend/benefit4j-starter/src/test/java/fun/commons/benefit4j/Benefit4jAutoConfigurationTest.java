@@ -23,7 +23,8 @@ public class Benefit4jAutoConfigurationTest {
             .withBean(fun.commons.benefit4j.service.BenefitOpsService.class, () -> mock(fun.commons.benefit4j.service.BenefitOpsService.class))
             .withBean(fun.commons.benefit4j.service.BenefitRuntimeService.class, () -> mock(fun.commons.benefit4j.service.BenefitRuntimeService.class))
             .withBean(fun.commons.benefit4j.service.BenefitPlatformService.class, () -> mock(fun.commons.benefit4j.service.BenefitPlatformService.class))
-            .withBean(org.springframework.jdbc.core.JdbcTemplate.class, () -> mock(org.springframework.jdbc.core.JdbcTemplate.class));
+            .withBean(org.springframework.jdbc.core.JdbcTemplate.class, () -> mock(org.springframework.jdbc.core.JdbcTemplate.class))
+            .withBean(fun.commons.framework4j.transport.HttpTransport.class, () -> mock(fun.commons.framework4j.transport.HttpTransport.class));
 
     @Test
     void testLocalMode() {

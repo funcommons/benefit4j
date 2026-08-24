@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import fun.commons.benefit4j.properties.Benefit4jProperties;
-import fun.commons.benefit4j.transport.HttpTransport;
+import fun.commons.framework4j.transport.HttpTransport;
 import fun.commons.benefit4j.dto.*;
 
 public class RemoteBenefitOpsClientTest {

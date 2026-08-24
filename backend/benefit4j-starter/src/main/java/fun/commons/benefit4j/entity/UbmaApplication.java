@@ -3,7 +3,7 @@ package fun.commons.benefit4j.entity;
 import fun.commons.framework4j.openid.annotation.OpenId;
 import fun.commons.framework4j.sensitive.annotation.Sensitive;
 import fun.commons.framework4j.sensitive.annotation.SensitiveRule;
-import fun.commons.benefit4j.handler.BenefitAppSecretTypeHandler;
+import fun.commons.framework4j.sensitive.typehandler.LazyEncryptedFieldTypeHandler;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -36,7 +36,7 @@ public class UbmaApplication {
      * OAuth2 client_secret (HMAC-SHA256签名密钥)
      * 写入 DB 自动 AES-256-GCM 加密, 读取自动解密; 响应序列化时脱敏 (保留前2后4)
      */
-    @TableField(typeHandler = BenefitAppSecretTypeHandler.class)
+    @TableField(typeHandler = LazyEncryptedFieldTypeHandler.class)
     @Sensitive(value = SensitiveRule.CUSTOM, pattern = "2,4,0")
     private String appSecret;
 

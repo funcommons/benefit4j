@@ -3,7 +3,7 @@ package fun.commons.benefit4j.client.impl;
 import fun.commons.benefit4j.client.BenefitRuntimeClient;
 import fun.commons.benefit4j.dto.*;
 import fun.commons.benefit4j.properties.Benefit4jProperties;
-import fun.commons.benefit4j.transport.HttpTransport;
+import fun.commons.framework4j.transport.HttpTransport;
 
 /**
  * remote 模式: 业务方跨进程调用独立部署的 benefit4j。

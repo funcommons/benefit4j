@@ -4,7 +4,7 @@ import fun.commons.benefit4j.client.BenefitOpsClient;
 import fun.commons.benefit4j.dto.PostCacheEvictRequest;
 import fun.commons.benefit4j.dto.PostJobsRefreshCyclesRequest;
 import fun.commons.benefit4j.properties.Benefit4jProperties;
-import fun.commons.benefit4j.transport.HttpTransport;
+import fun.commons.framework4j.transport.HttpTransport;
 
 /**
  * remote 模式 ops client (跨进程调远端 benefit4j ops)。

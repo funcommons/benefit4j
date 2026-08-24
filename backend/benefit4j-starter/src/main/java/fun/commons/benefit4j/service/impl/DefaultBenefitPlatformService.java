@@ -134,7 +134,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         }
 
         String newSecret = UUID.randomUUID().toString().replace("-", "");
-        // 走 updateById 让 BenefitAppSecretTypeHandler 自动加密 app_secret;
+        // 走 updateById 让 LazyEncryptedFieldTypeHandler (framework4j) 自动加密 app_secret;
         // ext 字段标了 jdbcType=JdbcType.OTHER 修复 JSONB update cast, 全量 updateById 不再报
         // "column ext is of type jsonb but expression is of type varchar"
         app.setAppSecret(newSecret);

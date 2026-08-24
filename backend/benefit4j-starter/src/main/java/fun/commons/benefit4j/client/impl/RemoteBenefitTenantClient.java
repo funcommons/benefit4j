@@ -3,7 +3,7 @@ package fun.commons.benefit4j.client.impl;
 import fun.commons.benefit4j.client.BenefitTenantClient;
 import fun.commons.benefit4j.dto.*;
 import fun.commons.benefit4j.properties.Benefit4jProperties;
-import fun.commons.benefit4j.transport.HttpTransport;
+import fun.commons.framework4j.transport.HttpTransport;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
