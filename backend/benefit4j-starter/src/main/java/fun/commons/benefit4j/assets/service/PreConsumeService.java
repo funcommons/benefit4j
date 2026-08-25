@@ -113,7 +113,7 @@ public class PreConsumeService {
 
         // FREEZE 自环腿(审计;src=dst 同户,delta 自抵,不重复记账)
         insertPosting(pc.getTxId(), "FREEZE", req, acc, acc, req.getEstimated(),
-                acc.getBalance().subtract(req.getEstimated()), null);
+                acc.getBalance().subtract(req.getEstimated()), 0, null);
 
         // 回填账户关联(单据已在库,update 关联列)
         UbmxPreConsume patch = new UbmxPreConsume();
@@ -121,6 +121,68 @@ public class PreConsumeService {
         patch.setUserAccountId(acc.getId());
         preConsumeMapper.updateById(patch);
         return viewOf(pc);
+    }
+
+    // ---------- ①' DUAL 双账户预扣(§3.3) ----------
+
+    public PreConsumeView preConsumeDual(fun.commons.benefit4j.assets.dto.PreConsumeDualRequest req) {
+        if (req.getAppId() == null || req.getRequestId() == null || req.getRequestId().isBlank()
+                || req.getUserAccountRef() == null || req.getTenantAccountRef() == null
+                || req.getAssetCode() == null
+                || req.getEstimated() == null || req.getEstimated().signum() <= 0) {
+            throw new AssetsException(AssetsException.ASSET_INVALID,
+                    "双扣参数非法(appId/requestId/双侧账户引用/assetCode/estimated>0)");
+        }
+        return retry.execute(ctx -> txTemplate.execute(status -> {
+            UbmxPreConsume pc = new UbmxPreConsume();
+            pc.setId(IdWorker.getId());
+            pc.setAppId(req.getAppId());
+            pc.setRequestId(req.getRequestId());
+            pc.setTxId(IdWorker.getId());
+            pc.setChargeMode("DUAL");
+            pc.setAssetCode(req.getAssetCode());
+            pc.setEstimated(req.getEstimated());
+            int expireSeconds = req.getExpireSeconds() != null && req.getExpireSeconds() > 0
+                    ? req.getExpireSeconds() : DEFAULT_EXPIRE_SECONDS;
+            pc.setExpireTime(OffsetDateTime.now().plusSeconds(expireSeconds));
+            if (preConsumeMapper.insertIgnore(pc) == 0) {
+                return viewOf(loadByRequest(req.getAppId(), req.getRequestId()));
+            }
+            pc.setStatus("RESERVED");
+
+            UbmxAccount userAcc = accountService.resolveRef(req.getAppId(), req.getUserAccountRef(), req.getAssetCode());
+            UbmxAccount tenantAcc = accountService.resolveRef(req.getAppId(), req.getTenantAccountRef(), req.getAssetCode());
+            // 锁两账户(SQL 内 ORDER BY id 升序,防死锁);任一不足 → 整笔回滚
+            List<UbmxAccount> locked = accountMapper.lockByIds(
+                    List.of(userAcc.getId(), tenantAcc.getId()));
+            if (locked.size() != 2 || locked.stream().anyMatch(a -> !"ACTIVE".equals(a.getStatus()))) {
+                throw new AssetsException(AssetsException.ASSET_INVALID, "双扣账户不可用");
+            }
+            for (UbmxAccount acc : locked) {
+                if (acc.getBalance().add(acc.getCreditLimit()).compareTo(req.getEstimated()) < 0) {
+                    throw new AssetsException(AssetsException.INSUFFICIENT_BALANCE,
+                            "双扣余额不足: accountId=" + acc.getId()
+                                    + " balance=" + acc.getBalance() + " credit=" + acc.getCreditLimit()
+                                    + " estimated=" + req.getEstimated());
+                }
+            }
+            // 双侧同额挪移 balance→frozen(无中间户,§3.3 定案)
+            accountMapper.adjustBalanceAndFrozen(userAcc.getId(), req.getEstimated().negate(), req.getEstimated());
+            accountMapper.adjustBalanceAndFrozen(tenantAcc.getId(), req.getEstimated().negate(), req.getEstimated());
+            insertPosting(pc.getTxId(), "FREEZE", buildReq(req.getAppId(), req.getRequestId(), req.getAssetCode()),
+                    userAcc, userAcc, req.getEstimated(),
+                    userAcc.getBalance().subtract(req.getEstimated()), 0, null);
+            insertPosting(pc.getTxId(), "FREEZE", buildReq(req.getAppId(), req.getRequestId(), req.getAssetCode()),
+                    tenantAcc, tenantAcc, req.getEstimated(),
+                    tenantAcc.getBalance().subtract(req.getEstimated()), 1, null);
+
+            UbmxPreConsume patch = new UbmxPreConsume();
+            patch.setId(pc.getId());
+            patch.setUserAccountId(userAcc.getId());
+            patch.setTenantAccountId(tenantAcc.getId());
+            preConsumeMapper.updateById(patch);
+            return viewOf(pc);
+        }));
     }
 
     // ---------- ② 结算 ----------
@@ -138,45 +200,51 @@ public class PreConsumeService {
             if (!"RESERVED".equals(pc.getStatus())) {
                 return viewOf(pc);   // 终态幂等返回
             }
-            UbmxAccount acc = lockedAccount(pc.getUserAccountId());
+            List<UbmxAccount> accounts = lockTargets(pc);   // SOLO=1 户 / DUAL=2 户
 
             BigDecimal est = pc.getEstimated();
             BigDecimal actual = req.getActual();
             BigDecimal diff = est.subtract(actual);   // >0 退回 / <0 补扣
-            BigDecimal balanceDelta;
-            String nextStatus;
-            BigDecimal settled;
+            boolean partial = false;
+            BigDecimal settled = actual;
+            List<BigDecimal> deltas = new java.util.ArrayList<>();
 
-            if (diff.signum() >= 0) {
-                balanceDelta = diff;
-                nextStatus = "SETTLED";
-                settled = actual;
-            } else {
-                BigDecimal need = diff.negate();
-                BigDecimal affordable = acc.getBalance().add(acc.getCreditLimit());
-                if (need.compareTo(affordable) <= 0) {
-                    balanceDelta = need.negate();
-                    nextStatus = "SETTLED";
-                    settled = actual;
+            for (UbmxAccount acc : accounts) {
+                BigDecimal balanceDelta;
+                if (diff.signum() >= 0) {
+                    balanceDelta = diff;
                 } else {
-                    // O15: 补扣不足 → 尽扣至授信下限,差额挂账(差错池 P2),终态放行
-                    balanceDelta = affordable.negate();
-                    nextStatus = "PARTIAL_SETTLED";
-                    settled = est.add(affordable);
-                    log.warn("PARTIAL_SETTLED 预扣单差额挂账: requestId={} need={} affordable={}",
-                            req.getRequestId(), need, affordable);
+                    BigDecimal need = diff.negate();
+                    BigDecimal affordable = acc.getBalance().add(acc.getCreditLimit());
+                    if (need.compareTo(affordable) <= 0) {
+                        balanceDelta = need.negate();
+                    } else {
+                        // O15: 补扣不足 → 尽扣至授信下限,差额挂账(差错池),终态放行
+                        balanceDelta = affordable.negate();
+                        partial = true;
+                        log.warn("PARTIAL_SETTLED 差额挂账: requestId={} accountId={} need={} affordable={}",
+                                req.getRequestId(), acc.getId(), need, affordable);
+                    }
                 }
+                accountMapper.adjustBalanceAndFrozen(acc.getId(), balanceDelta, est.negate());
+                deltas.add(balanceDelta);
             }
-
-            accountMapper.adjustBalanceAndFrozen(acc.getId(), balanceDelta, est.negate());
+            // SOLO 保持原语义: partial 时 settled = est + affordable(尽扣额)
+            if (partial && accounts.size() == 1) {
+                settled = est.add(accounts.get(0).getBalance().add(accounts.get(0).getCreditLimit()));
+            }
+            String nextStatus = partial ? "PARTIAL_SETTLED" : "SETTLED";
             guardToTerminal(pc, nextStatus, settled);
 
-            // CONSUME 腿: 真实消耗流向 fee 边界户(BOUNDARY 不记账)
-            UbmxAccount fee = accountService.getOrCreateBoundaryAccount(
-                    pc.getAppId(), "fee:" + pc.getAssetCode(), pc.getAssetCode());
-            insertPosting(IdWorker.getId(), "CONSUME",
-                    buildReq(pc.getAppId(), pc.getRequestId(), pc.getAssetCode()),
-                    acc, fee, actual, acc.getBalance().add(balanceDelta), null);
+            // CONSUME 腿: 每账户一条,流向 fee 边界户(BOUNDARY 不记账)
+            for (int i = 0; i < accounts.size(); i++) {
+                UbmxAccount fee = accountService.getOrCreateBoundaryAccount(
+                        pc.getAppId(), "fee:" + pc.getAssetCode(), pc.getAssetCode());
+                insertPosting(IdWorker.getId(), "CONSUME",
+                        buildReq(pc.getAppId(), pc.getRequestId(), pc.getAssetCode()),
+                        accounts.get(i), fee, actual,
+                        accounts.get(i).getBalance().add(deltas.get(i)), i, null);
+            }
 
             pc.setStatus(nextStatus);
             pc.setSettledAmount(settled);
@@ -221,14 +289,17 @@ public class PreConsumeService {
     }
 
     private PreConsumeView doRelease(UbmxPreConsume pc, String terminalStatus) {
-        UbmxAccount acc = lockedAccount(pc.getUserAccountId());
+        List<UbmxAccount> accounts = lockTargets(pc);
         BigDecimal est = pc.getEstimated();
-        accountMapper.adjustBalanceAndFrozen(acc.getId(), est, est.negate());
+        for (int i = 0; i < accounts.size(); i++) {
+            UbmxAccount acc = accounts.get(i);
+            accountMapper.adjustBalanceAndFrozen(acc.getId(), est, est.negate());
+            insertPosting(IdWorker.getId(), "REFUND",
+                    buildReq(pc.getAppId(), pc.getRequestId(), pc.getAssetCode()),
+                    acc, acc, est, acc.getBalance().add(est), i,
+                    "EXPIRED".equals(terminalStatus) ? Map.of("expired", true) : null);
+        }
         guardToTerminal(pc, terminalStatus, null);
-        insertPosting(IdWorker.getId(), "REFUND",
-                buildReq(pc.getAppId(), pc.getRequestId(), pc.getAssetCode()),
-                acc, acc, est, acc.getBalance().add(est),
-                "EXPIRED".equals(terminalStatus) ? Map.of("expired", true) : null);
         pc.setStatus(terminalStatus);
         return viewOf(pc);
     }
@@ -251,6 +322,22 @@ public class PreConsumeService {
         return locked.get(0);
     }
 
+    /** SOLO=1 户 / DUAL=2 户;锁定按 id 升序(防死锁),返回按 user→tenant 语义序(与腿序一致) */
+    private List<UbmxAccount> lockTargets(UbmxPreConsume pc) {
+        List<Long> ids = "DUAL".equals(pc.getChargeMode())
+                ? List.of(pc.getUserAccountId(), pc.getTenantAccountId())
+                : List.of(pc.getUserAccountId());
+        List<UbmxAccount> locked = accountMapper.lockByIds(ids);
+        if (locked.size() != ids.size()
+                || locked.stream().anyMatch(a -> !"ACTIVE".equals(a.getStatus()))) {
+            throw new AssetsException(AssetsException.ASSET_INVALID,
+                    "预扣账户不可用: requestId=" + pc.getRequestId());
+        }
+        java.util.Map<Long, UbmxAccount> byId = new java.util.HashMap<>();
+        locked.forEach(a -> byId.put(a.getId(), a));
+        return ids.stream().map(byId::get).toList();
+    }
+
     /** O15 guard: RESERVED → 终态单向迁移,rows==0 = 并发已被迁移(由外层重读返回) */
     private void guardToTerminal(UbmxPreConsume pc, String status, BigDecimal settled) {
         if (preConsumeMapper.casToTerminal(pc.getId(), status, settled) == 0) {
@@ -261,13 +348,13 @@ public class PreConsumeService {
 
     private void insertPosting(Long txId, String txType, PreConsumeRequest reqMeta,
                                UbmxAccount src, UbmxAccount dst, BigDecimal amount, BigDecimal balanceAfter,
-                               Map<String, Object> ext) {
+                               int legSeq, Map<String, Object> ext) {
         UbmxPosting p = new UbmxPosting();
         p.setAppId(reqMeta.getAppId());
         p.setTxId(txId);
         p.setTxType(txType);
         p.setExtOrderId(reqMeta.getRequestId());
-        p.setLegSeq(0);
+        p.setLegSeq(legSeq);
         p.setSrcAccountId(src.getId());
         p.setDstAccountId(dst.getId());
         p.setAssetCode(reqMeta.getAssetCode());

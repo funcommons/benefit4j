@@ -44,6 +44,7 @@ public class BenefitAssetsRuntimeController {
     private final PreConsumeService preConsumeService;
     private final AccountService accountService;
     private final AssetsQueryService queryService;
+    private final fun.commons.benefit4j.assets.service.AssetsExchangeService exchangeService;
 
     /** 入账/通用记账(钱包中台 issue 模板 / 运营发奖,§4.3.1) */
     @PostMapping("/runtime/issue")
@@ -76,6 +77,26 @@ public class BenefitAssetsRuntimeController {
     public ApiResponse<Object> postPreConsume(@Valid @RequestBody PreConsumeRequest req) {
         req.setAppId(appId());   // token 覆盖 body
         return ApiResponse.success(preConsumeService.preConsume(req));
+    }
+
+    /** DUAL 双账户原子预扣(§3.3: user+tenant 同额,接 MMagiX 场景 2/3) */
+    @PostMapping("/runtime/pre-consume:dual")
+    @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_PRECONSUME_DUAL", targetType = "pre_consume", targetIdSpel = "#req.requestId")
+    public ApiResponse<Object> postPreConsumeDual(
+            @Valid @RequestBody fun.commons.benefit4j.assets.dto.PreConsumeDualRequest req) {
+        req.setAppId(appId());
+        return ApiResponse.success(preConsumeService.preConsumeDual(req));
+    }
+
+    /** 兑换(§3.2: 双腿原子,汇率由调用方定价) */
+    @PostMapping("/runtime/exchange")
+    @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_EXCHANGE", targetType = "tx_order", targetIdSpel = "#req.orderId")
+    public ApiResponse<Object> postExchange(
+            @Valid @RequestBody fun.commons.benefit4j.assets.dto.ExchangeRequest req) {
+        req.setAppId(appId());
+        return ApiResponse.success(exchangeService.exchange(req));
     }
 
     /** 结算(confirm 实际额,diff 自动回补/补扣) */
