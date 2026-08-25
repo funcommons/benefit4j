@@ -123,15 +123,16 @@ public class AssetsLimitGuard {
         return sum == null ? BigDecimal.ZERO : sum;
     }
 
-    /** Asia/Shanghai 当日 00:00(timestamptz 比较) */
+    /** Asia/Shanghai 当日 00:00(timestamptz 比较)。必须先转到营业时区再取日期,
+     *  否则 UTC 傍晚传入会按 UTC 日期算成前一天(单测 AssetsPureLogicTest 抓出)。 */
     static OffsetDateTime dayStart(OffsetDateTime now) {
-        LocalDate d = now.toLocalDate();
+        LocalDate d = now.atZoneSameInstant(BIZ_ZONE).toLocalDate();
         return d.atStartOfDay(BIZ_ZONE).toOffsetDateTime();
     }
 
-    /** Asia/Shanghai 当月 1 日 00:00 */
+    /** Asia/Shanghai 当月 1 日 00:00(同样先转营业时区) */
     static OffsetDateTime monthStart(OffsetDateTime now) {
-        LocalDate d = now.toLocalDate().withDayOfMonth(1);
+        LocalDate d = now.atZoneSameInstant(BIZ_ZONE).toLocalDate().withDayOfMonth(1);
         return d.atStartOfDay(BIZ_ZONE).toOffsetDateTime();
     }
 }
