@@ -16,7 +16,7 @@ public class Benefit4jIntegrationTest {
 
     @SpringBootApplication
     @ComponentScan(basePackages = "fun.commons.benefit4j")
-    @MapperScan("fun.commons.benefit4j.mapper")
+    @MapperScan({"fun.commons.benefit4j.mapper", "fun.commons.benefit4j.assets.mapper"})
     static class TestApplication {
     }
 
