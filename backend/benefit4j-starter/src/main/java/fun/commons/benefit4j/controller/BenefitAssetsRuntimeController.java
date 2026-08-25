@@ -11,6 +11,7 @@ import fun.commons.benefit4j.assets.service.AssetsQueryService;
 import fun.commons.benefit4j.assets.service.PostingService;
 import fun.commons.benefit4j.assets.service.PreConsumeService;
 import fun.commons.framework4j.accesstoken.annotation.RequiresToken;
+import fun.commons.framework4j.audit.annotation.Auditable;
 import fun.commons.framework4j.accesstoken.context.TokenContext;
 import fun.commons.framework4j.ratelimit.annotation.RateLimit;
 import fun.commons.framework4j.signature.annotation.RequiresSignature;
@@ -47,6 +48,7 @@ public class BenefitAssetsRuntimeController {
     /** 入账/通用记账(钱包中台 issue 模板 / 运营发奖,§4.3.1) */
     @PostMapping("/runtime/issue")
     @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_ISSUE", targetType = "tx_order", targetIdSpel = "#req.extOrderId")
     public ApiResponse<Map<String, Object>> postIssue(@Valid @RequestBody PostIssueRequest req) {
         PostingCommand cmd = new PostingCommand();
         cmd.setAppId(appId());
@@ -70,6 +72,7 @@ public class BenefitAssetsRuntimeController {
     /** 预扣(§4.4) */
     @PostMapping("/runtime/pre-consume")
     @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_PRECONSUME", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postPreConsume(@Valid @RequestBody PreConsumeRequest req) {
         req.setAppId(appId());   // token 覆盖 body
         return ApiResponse.success(preConsumeService.preConsume(req));
@@ -78,6 +81,7 @@ public class BenefitAssetsRuntimeController {
     /** 结算(confirm 实际额,diff 自动回补/补扣) */
     @PostMapping("/runtime/settle")
     @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_SETTLE", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postSettle(@Valid @RequestBody SettleRequest req) {
         req.setAppId(appId());
         return ApiResponse.success(preConsumeService.settle(req));
@@ -86,6 +90,7 @@ public class BenefitAssetsRuntimeController {
     /** 退款(全额释放预扣) */
     @PostMapping("/runtime/refund")
     @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_REFUND", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postRefund(@Valid @RequestBody RefundRequest req) {
         return ApiResponse.success(preConsumeService.refund(appId(), req.getRequestId()));
     }

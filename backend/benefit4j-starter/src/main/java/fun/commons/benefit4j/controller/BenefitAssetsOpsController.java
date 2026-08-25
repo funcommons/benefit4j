@@ -4,6 +4,7 @@ import fun.commons.benefit4j.assets.dto.OpsAssetRequest;
 import fun.commons.benefit4j.assets.entity.UbmxAsset;
 import fun.commons.benefit4j.assets.service.AssetRegistryService;
 import fun.commons.framework4j.accesstoken.annotation.RequiresToken;
+import fun.commons.framework4j.audit.annotation.Auditable;
 import fun.commons.framework4j.web.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class BenefitAssetsOpsController {
     private final AssetRegistryService registry;
 
     @PostMapping("/assets")
+    @Auditable(action = "ASSETS_CREATE", targetType = "asset", targetIdSpel = "#req.code")
     public ApiResponse<UbmxAsset> postAssets(@Valid @RequestBody OpsAssetRequest req) {
         return ApiResponse.success(registry.createAsset(toEntity(req)));
     }
@@ -49,12 +51,14 @@ public class BenefitAssetsOpsController {
 
     /** 局部更新(白名单字段,null 跳过) */
     @PatchMapping("/assets/{code}")
+    @Auditable(action = "ASSETS_PATCH", targetType = "asset", targetIdSpel = "#code")
     public ApiResponse<UbmxAsset> patchAsset(@PathVariable("code") String code,
             @RequestBody OpsAssetRequest req) {
         return ApiResponse.success(registry.patchAsset(code, toEntity(req)));
     }
 
     @PostMapping("/assets/{code}/suspend")
+    @Auditable(action = "ASSETS_SUSPEND", targetType = "asset", targetIdSpel = "#code")
     public ApiResponse<Void> suspend(@PathVariable("code") String code) {
         registry.suspend(code);
         return ApiResponse.success();
