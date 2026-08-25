@@ -39,6 +39,18 @@ public interface UbmxAccountMapper extends BaseMapper<UbmxAccount> {
     int adjustBalance(@Param("id") Long id, @Param("delta") BigDecimal delta);
 
     /**
+     * TCC 预扣专用: balance 与 frozen 原子同动(预扣 -b/+f,结算/退款反向),
+     * 总资产不变,负余额仍由 DB CHECK 兜底。
+     */
+    @Update("/*traceid=assets,topic=account_freeze*/ "
+            + "UPDATE ubmx_account SET balance = balance + #{balanceDelta}, "
+            + "frozen = frozen + #{frozenDelta}, version = version + 1, "
+            + "updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
+    int adjustBalanceAndFrozen(@Param("id") Long id,
+                               @Param("balanceDelta") BigDecimal balanceDelta,
+                               @Param("frozenDelta") BigDecimal frozenDelta);
+
+    /**
      * lazy 开户: 并发下撞 (app,owner,asset) 唯一键不得中断事务(PG aborted 语义),
      * ON CONFLICT DO NOTHING 后重读。id 由调用方 IdWorker 生成(自定义 SQL 不走 MP 填充);
      * extJson 由调用方序列化(连接串 stringtype=unspecified,String 可直写 jsonb)。
