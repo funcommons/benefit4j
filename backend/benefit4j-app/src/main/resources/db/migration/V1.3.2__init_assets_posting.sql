@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS ubmx_posting (
     asset_code      VARCHAR(32)  NOT NULL,
     amount          NUMERIC(20,4) NOT NULL
                     CHECK (amount > 0),               -- 金额恒正,方向由腿含义区分
-    direction       VARCHAR(2)   NOT NULL
-                    CHECK (direction IN ('IN','OUT')),
+    direction       VARCHAR(3)   NOT NULL
+                    CHECK (direction IN ('IN','OUT')),  -- 'OUT' 为 3 字符,v0.4 文档误写 VARCHAR(2) 已修
     balance_after   NUMERIC(20,4),                    -- 该腿记账后 src/dst 余额(追溯用)
     status          VARCHAR(8)   NOT NULL DEFAULT 'INIT'
                     CHECK (status IN ('INIT','SUCCESS','FAILED')),
@@ -45,3 +45,6 @@ CREATE INDEX IF NOT EXISTS idx_ubmx_posting_dst         ON ubmx_posting(app_id, 
 CREATE INDEX IF NOT EXISTS idx_ubmx_posting_order       ON ubmx_posting(app_id, ext_order_id);
 CREATE INDEX IF NOT EXISTS idx_ubmx_posting_asset_time  ON ubmx_posting(asset_code, created_at DESC);  -- O8
 CREATE INDEX IF NOT EXISTS idx_ubmx_posting_ext_gin     ON ubmx_posting USING GIN (ext);
+
+-- 勘误修复: v1.0 该列误建为 VARCHAR(2),存不下 'OUT'(同类型 ALTER 幂等)
+ALTER TABLE ubmx_posting ALTER COLUMN direction TYPE VARCHAR(3);

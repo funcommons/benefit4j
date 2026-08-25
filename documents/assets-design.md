@@ -183,7 +183,7 @@ CREATE TABLE ubmx_posting (
     asset_code      VARCHAR(32)  NOT NULL,
     amount          NUMERIC(20,4) NOT NULL
                     CHECK (amount > 0),               -- 金额恒正,方向由 leg 含义区分
-    direction       VARCHAR(2)   NOT NULL
+    direction       VARCHAR(3)   NOT NULL
                     CHECK (direction IN ('IN','OUT')),
     balance_after   NUMERIC(20,4),                      -- 该腿记账后 src/dst 余额(便于追溯)
     status          VARCHAR(8)   NOT NULL DEFAULT 'INIT'

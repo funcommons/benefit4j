@@ -35,42 +35,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class AssetsSchemaIT {
 
-    private static final String[] MIGRATIONS = {
-            "V1.3.0__init_assets_asset.sql",
-            "V1.3.1__init_assets_account.sql",
-            "V1.3.2__init_assets_posting.sql",
-            "V1.3.3__init_assets_tx_order.sql",
-            "V1.3.4__init_assets_pre_consume.sql",
-            "V1.3.5__init_assets_freeze.sql",
-    };
-
     private static String url;
     private static String user;
     private static String pass;
 
     @BeforeAll
     static void applyMigrations() throws Exception {
-        url = System.getProperty("spring.datasource.url", "jdbc:postgresql://localhost:5432/benefit4j");
+        AssetsMigrations.applyAll();
+        try (Connection c = AssetsMigrations.open()) {
+            url = c.getMetaData().getURL();
+        }
         user = System.getProperty("spring.datasource.username", "admin");
         pass = System.getProperty("spring.datasource.password", "test@2026");
-        try (Connection conn = DriverManager.getConnection(url, user, pass)) {
-            for (String file : MIGRATIONS) {
-                try (var stmt = conn.createStatement()) {
-                    stmt.execute(loadDdl(file));
-                }
-            }
-        }
-    }
-
-    /** 从迁移文件读 DDL(SSOT),路径解析同 BucketCandidateIndexIT */
-    private static String loadDdl(String fileName) throws IOException {
-        String backendRoot = System.getProperty("benefit4j.backend.root",
-                Path.of(System.getProperty("user.dir")).toString());
-        Path candidate = Path.of(backendRoot, "../benefit4j-app/src/main/resources/db/migration/" + fileName);
-        if (!Files.exists(candidate)) {
-            candidate = Path.of(backendRoot, "benefit4j-app/src/main/resources/db/migration/" + fileName);
-        }
-        return Files.readString(candidate, StandardCharsets.UTF_8);
     }
 
     @Test

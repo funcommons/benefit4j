@@ -12,6 +12,11 @@
     <artifactId>benefit4j-starter</artifactId>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+
         <!-- framework4j SDK All -->
         <dependency>
             <groupId>com.github.funcommons.framework4j</groupId>
