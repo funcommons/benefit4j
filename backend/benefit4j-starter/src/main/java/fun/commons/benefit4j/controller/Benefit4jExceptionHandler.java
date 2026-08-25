@@ -49,6 +49,22 @@ public class Benefit4jExceptionHandler {
         return ApiResponse.fail(409, "数据已存在, 请勿重复提交");
     }
 
+    /** assets 域业务异常 → 稳定错误码映射(INSUFFICIENT_BALANCE=402 / 幂等与终态冲突=409 / 不存在=404 / 权限与合规=403 / 参数=400) */
+    @ExceptionHandler(fun.commons.benefit4j.assets.exception.AssetsException.class)
+    public ApiResponse<Void> handleAssets(fun.commons.benefit4j.assets.exception.AssetsException ex) {
+        int http;
+        switch (ex.getCode()) {
+            case fun.commons.benefit4j.assets.exception.AssetsException.INSUFFICIENT_BALANCE -> http = 402;
+            case fun.commons.benefit4j.assets.exception.AssetsException.IDEMPOTENCY_CONFLICT -> http = 409;
+            case fun.commons.benefit4j.assets.exception.AssetsException.ASSET_NOT_FOUND,
+                 fun.commons.benefit4j.assets.exception.AssetsException.PRE_CONSUME_NOT_FOUND -> http = 404;
+            case fun.commons.benefit4j.assets.exception.AssetsException.FIAT_NOT_ALLOWED,
+                 fun.commons.benefit4j.assets.exception.AssetsException.ASSET_PRIVILEGE_DENIED -> http = 403;
+            default -> http = 400;
+        }
+        return ApiResponse.fail(http, "[" + ex.getCode() + "] " + ex.getMessage());
+    }
+
     /** 非法参数 → 400 */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

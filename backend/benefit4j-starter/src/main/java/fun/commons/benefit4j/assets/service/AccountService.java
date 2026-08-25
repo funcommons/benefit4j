@@ -94,6 +94,27 @@ public class AccountService {
         accountMapper.updateById(acc);
     }
 
+    /** 只读解析(查询 API 用): 不 lazy 开户,不存在返回 null,杜绝查询写副作用 */
+    public UbmxAccount findRef(Long appId, String ref, String assetCode) {
+        int colon = ref.indexOf(':');
+        if (colon < 0) {
+            throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
+        }
+        String head = ref.substring(0, colon);
+        long ownerId;
+        try {
+            ownerId = Long.parseLong(ref.substring(colon + 1));
+        } catch (NumberFormatException e) {
+            throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
+        }
+        if ("issue".equals(head) || "fee".equals(head) || "exchange".equals(head)
+                || "credit".equals(head) || "world".equals(head)) {
+            String kind = head.equals("world") ? ref : head;
+            return selectByUniqueKey(appId, "PLATFORM", boundaryOwnerIdOf(kind), assetCode);
+        }
+        return selectByUniqueKey(appId, head.toUpperCase(), ownerId, assetCode);
+    }
+
     /** 引擎解析腿时调用;独立调用(非事务)自开事务 */
     public UbmxAccount resolveRef(Long appId, String ref, String assetCode) {
         int colon = ref.indexOf(':');
