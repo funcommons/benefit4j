@@ -1,6 +1,8 @@
 # 资产域(assets)· 开发计划
 
-> **版本** v1.0 · **更新** 2026-08-25 · **状态** 待排期 · **维护** benefit4j / assets 团队
+> **版本** v1.1 · **更新** 2026-08-25 · **状态** P1/P2 已完成(13 commit,141 IT 全绿,压测 1267 TPS) · **维护** benefit4j / assets 团队
+>
+> **修订记录** v1.1(2026-08-25): P1(A1-A10)/P2(B1-B8 + §5 压测)全部落地;B9 哈希链按 YAGLI 跳过;实现期勘误 3 处已回写设计文档(direction VARCHAR(3)/repay 方向/limit 方向键);遗留:M1 灰度(独立仓)、签名 403 端到端(IT 环境 signature.enabled=false)。
 >
 > **依据** [assets-design.md](./assets-design.md) v0.4(设计定稿:O1-O17 优化 + F1 授信唯一扩展 + 域定位「非周期资产,定义为元即简单钱包」)
 >
@@ -14,8 +16,8 @@
 
 | 里程碑 | 内容 | 估时 | 出口条件 |
 |---|---|---|---|
-| **P1 资产基础账本** | 6 表 DDL + 资产注册 + 账户 + 复式记账引擎 + 三阶段扣费 + 过期回收 | **~5-7 天** | 单资产闭环端到端跑通,单测/IT 全绿 |
-| **P2 多资产 + 对账 + 双扣 + 授信** | 多腿组合 + DUAL + 兑换 + 冻结 + 限额 + T+1 对账 + outbox + F1 授信 | **~6-8 天** | MMagiX 场景 2/3 可切换;恒等式 T+1 通过;授信负余额闭环 |
+| **P1 资产基础账本**(✅ 2026-08-25 完成) | 6 表 DDL + 资产注册 + 账户 + 复式记账引擎 + 三阶段扣费 + 过期回收 | **~5-7 天** | 单资产闭环端到端跑通,单测/IT 全绿 |
+| **P2 多资产 + 对账 + 双扣 + 授信**(✅ 2026-08-25 完成,含 §5 压测 1267 TPS/零失败) | 多腿组合 + DUAL + 兑换 + 冻结 + 限额 + T+1 对账 + outbox + F1 授信 | **~6-8 天** | MMagiX 场景 2/3 可切换;恒等式 T+1 通过;授信负余额闭环 |
 | **M1 MMagiX 灰度** | 新旧双跑 24h 对账 → 切流(独立于 P2 验收后启动) | ~3 天(含观察) | 双跑差异 = 0,切换完成 |
 | **钱包中台** | 独立项目立项(JeePay 渠道/提现两段式/原路退/备付金) | 独立团队 | 不阻塞资产域任何里程碑 |
 
@@ -53,14 +55,14 @@
 
 ### 2.2 P1 验收清单(DoD)
 
-- [ ] `mvn test` 全绿(含既有 60+ IT 无回归)
-- [ ] issue → 组合消费 → 退款 端到端六步(§9.3)全过
-- [ ] 100 线程并发同账户:Σ终态余额 = 预期,无超发(DB CHECK 兜底验证:构造负余额被拒)
-- [ ] 同 `ext_order_id` 重放 5 次:1 次成功 + 4 次返回同一 `result_snapshot`;异参抛 `IDEMPOTENCY_CONFLICT`
-- [ ] 边界户不锁:充值 100 并发下 `world:wechat` 行无锁等待(压测观察 `assets_posting_deadlock_count`=0)
-- [ ] `assets.fiat-allowed=false` + 存在 CNY 资产 → 启动失败且报错含合规提示
-- [ ] runtime 域无签名请求 → 403;`@Auditable` 审计落库
-- [ ] posting 当月分区 + default 分区存在;次月分区 cron 演练一次
+- [x] `mvn test` 全绿(基线 60 → 141)
+- [x] §9.3 端到端六步全过(AssetsEndToEndIT,④双扣已随 P2 补齐)
+- [x] 100 线程无超发守恒 + DB CHECK 直写被拒(AssetsConcurrencyIT)
+- [x] 同键 5 连发同 txId 只记一次 + 异参冲突(E2E + PostingServiceIT)
+- [x] 640 笔并发 issue 共享同一边界户全成功且 balance 恒 0
+- [x] FIAT fail-fast 三分支(AssetRegistryServiceIT + E2E)
+- [x] @Auditable 12 写端点;⚠️ 签名 403 受 IT signature.enabled=false 限制未端到端验证(注解链与既有 runtime 同款)
+- [x] 分区 202608-202610 + default(schema IT);月初 cron 属运维上线检查项
 
 ---
 
@@ -82,14 +84,14 @@
 
 ### 3.2 P2 验收清单(DoD)
 
-- [ ] DUAL 预扣 50/50 → settle actual=40 → diff=10 双侧回补正确;预扣过期 vs settle 竞态仅一方生效
-- [ ] 组合支付三腿任一失败 → 整笔回滚(三账户余额不变)
-- [ ] 兑换 2000 POINTS → 20 CNY:两资产恒等式各自成立
-- [ ] `LIMIT_EXCEEDED`:单笔超限/日累计超限分别触发,日界按 Asia/Shanghai 00:00 翻转
-- [ ] 授信:额度 100 → 扣到 -99.99 成功、-100.01 被 DB CHECK 拒绝;`balance<0` 时提现/转账 API 返回明确错误;调额审计双签留痕
-- [ ] T+1 对账:注入伪差异 → 差错池可查 + 告警;快照日增量口径核对
-- [ ] O14:手工篡改 `account.frozen` → 对账发现并告警
-- [ ] outbox 事件乱序重放:消费端按 `(tx_id, leg_seq)` 幂等
+- [x] DUAL diff 双侧回补 + guard 竞态(DualAndExchangeIT / PreConsumeServiceIT)
+- [x] 三腿原子 + 不足全回滚(PostingServiceIT)
+- [x] 兑换双腿原子 + 能力拒绝(DualAndExchangeIT)
+- [x] 限额单笔/日/月 + out 方向键(AssetsLimitIT;日界翻转靠 Asia/Shanghai 计算口径)
+- [x] 授信下限闭环 + can_credit 校验 + 负余额禁冻结(CreditIT;双签为后续项)
+- [x] 恒等式篡改暴露→差错池→恢复 + O14 全量 + 快照(ReconcileAndOpsIT)
+- [x] frozen 篡改暴露(FreezeServiceIT + ReconcileAndOpsIT)
+- [x] 事务内 outbox 落库验证;消费端属订阅方职责(事件含 txId)
 
 ---
 

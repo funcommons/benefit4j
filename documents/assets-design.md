@@ -893,12 +893,18 @@ backend/benefit4j-starter/src/main/java/fun/commons/benefit4j/assets/
 │   └── UbmxFreezeMapper.java
 ├── service/
 │   ├── AssetRegistryService.java      # 资产定义 CRUD
-│   ├── AccountService.java            # lazy 开户 + 余额查询
-│   ├── PostingService.java            # 复式记账引擎(核心)
-│   └── PreConsumeService.java         # 三阶段 + 过期回收
+│   ├── AccountService.java            # lazy 开户 + 余额查询 + findRef 只读解析
+│   ├── PostingService.java            # 复式记账引擎(核心,含 outbox 事件)
+│   ├── PreConsumeService.java         # 三阶段(SOLO/DUAL)+ 过期回收
+│   ├── AssetsExchangeService.java     # 兑换(P2)
+│   ├── AssetsFreezeService.java       # 冻结/解冻 + O14 一致性(P2)
+│   ├── AssetsLimitGuard.java          # limit_policy 限额(P2,方向键)
+│   ├── AssetsReconcileService.java    # T+1 对账 + 快照 + 差错池(P2)
+│   ├── AssetsIdempotencyService.java  # 幂等释放(P2,O6)
+│   └── AssetsQueryService.java        # 账户/流水查询
 ├── scheduler/
 │   ├── AssetsExpireScheduler.java     # 仿 ReserveTimeoutScheduler
-│   └── AssetsReconcileScheduler.java  # T+1 对账 + 快照 + 冻结一致性(P2)
+│   └── AssetsReconcileScheduler.java  # T+1 对账 02:00 Asia/Shanghai(P2)
 ├── exception/
 │   ├── InsufficientBalanceException.java
 │   └── AssetsConfigException.java     # FIAT 禁用抛
@@ -921,7 +927,8 @@ backend/benefit4j-app/src/main/resources/db/migration/
 ├── V1.3.2__init_assets_posting.sql            # ubmx_posting + 索引(月分区)
 ├── V1.3.3__init_assets_tx_order.sql           # ubmx_tx_order 幂等闸(O10)
 ├── V1.3.4__init_assets_pre_consume.sql        # ubmx_pre_consume + 部分索引
-└── V1.3.5__init_assets_freeze.sql             # ubmx_freeze + 部分索引
+├── V1.3.5__init_assets_freeze.sql             # ubmx_freeze + 部分索引
+└── V1.3.6__init_reconcile.sql                 # 快照/差错池 + outbox 兜底(P2)
 ```
 
 ---
