@@ -164,7 +164,7 @@ public class BenefitAssetsRuntimeController {
     public ApiResponse<List<UbmxAccount>> getAccounts(
             @RequestParam("owner_type") String ownerType,
             @RequestParam("owner_id") Long ownerId) {
-        return ApiResponse.success(queryService.listAccounts(appId(), ownerType, ownerId));
+        return ApiResponse.success(queryService.listAccounts(appId(), ownerType, ownerId, null));
     }
 
     /** 账户流水分页(§4.5,按账户引用 + 资产) */

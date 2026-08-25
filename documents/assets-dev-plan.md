@@ -95,6 +95,16 @@
 
 ---
 
+## 3.5 P3 运营前端(v1.2 追加,2026-08-26)
+
+| # | 任务 | 说明 |
+|---|---|---|
+| C1 | OPS 查询端点补齐 | 流水/账户查询原仅在签名 runtime 域,平台端浏览器不可达;补 `GET /assets/ops/postings`、`GET /assets/ops/accounts`(OPS token) |
+| C2 | api/benefitAssets.ts | 仿 benefitItem.ts 范式(snake_case) |
+| C3 | Assets.vue(平台端) | 资产注册列表/新建/停启用(can_* 能力位展示) |
+| C4 | AssetPostings.vue | 流水查询(账户引用+资产,分页) |
+| 验证 | typecheck + 既有 e2e 无回归 | 禁区 dev/sdk 不触 |
+
 ## 4. MMagiX 灰度迁移(M1,P2 验收后)
 
 | 步骤 | 内容 | 通过条件 |

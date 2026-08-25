@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -19,12 +20,13 @@ public class AssetsQueryService {
     private final UbmxAccountMapper accountMapper;
     private final UbmxPostingMapper postingMapper;
 
-    /** 主体名下所有资产账户(§4.2) */
-    public List<UbmxAccount> listAccounts(Long appId, String ownerType, Long ownerId) {
+    /** 主体名下所有资产账户(§4.2);assetCode 可选过滤 */
+    public List<UbmxAccount> listAccounts(Long appId, String ownerType, Long ownerId, String assetCode) {
         return accountMapper.selectList(new LambdaQueryWrapper<UbmxAccount>()
                 .eq(UbmxAccount::getAppId, appId)
                 .eq(UbmxAccount::getOwnerType, ownerType)
                 .eq(UbmxAccount::getOwnerId, ownerId)
+                .eq(StringUtils.hasText(assetCode), UbmxAccount::getAssetCode, assetCode)
                 .orderByAsc(UbmxAccount::getAssetCode));
     }
 

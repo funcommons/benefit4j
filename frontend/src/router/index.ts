@@ -192,6 +192,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'router.benefit-platform-templates-item', icon: 'PriceTag' }
       },
       {
+        path: 'assets',
+        name: 'BenefitPlatformAssets',
+        component: () => import('@/views/benefit/Assets.vue'),
+        meta: { title: 'router.benefit-platform-assets', icon: 'Coin' }
+      },
+      {
+        path: 'asset-postings',
+        name: 'BenefitPlatformAssetPostings',
+        component: () => import('@/views/benefit/AssetPostings.vue'),
+        meta: { title: 'router.benefit-platform-asset-postings', icon: 'List' }
+      },
+      {
         path: 'sets',
         name: 'BenefitPlatformSets',
         component: () => import('@/views/benefit/Sets.vue'),

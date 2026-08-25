@@ -33,6 +33,7 @@ public class BenefitAssetsOpsController {
     private final fun.commons.benefit4j.assets.service.AssetsReconcileService reconcileService;
     private final fun.commons.benefit4j.assets.service.AssetsIdempotencyService idempotencyService;
     private final fun.commons.benefit4j.assets.service.AccountService accountService;
+    private final fun.commons.benefit4j.assets.service.AssetsQueryService queryService;
 
     @PostMapping("/assets")
     @Auditable(action = "ASSETS_CREATE", targetType = "asset", targetIdSpel = "#req.code")
@@ -71,6 +72,29 @@ public class BenefitAssetsOpsController {
     public ApiResponse<Void> resume(@PathVariable("code") String code) {
         registry.resume(code);
         return ApiResponse.success();
+    }
+
+    /** 运营查主体资产账户(P3 前端,OPS 只读;不开户) */
+    @GetMapping("/accounts")
+    public ApiResponse<List<fun.commons.benefit4j.assets.entity.UbmxAccount>> getAccounts(
+            @RequestParam("owner_type") String ownerType,
+            @RequestParam("owner_id") Long ownerId,
+            @RequestParam(value = "asset_code", required = false) String assetCode) {
+        return ApiResponse.success(queryService.listAccounts(reqAppId(), ownerType, ownerId, assetCode));
+    }
+
+    /** 运营查账户流水(P3 前端,OPS 只读;账户引用不存在返回空) */
+    @GetMapping("/postings")
+    public ApiResponse<Object> getPostings(
+            @RequestParam("account_ref") String accountRef,
+            @RequestParam("asset_code") String assetCode,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        var acc = accountService.findRef(reqAppId(), accountRef, assetCode);
+        if (acc == null) {
+            return ApiResponse.success(List.of());
+        }
+        return ApiResponse.success(queryService.listPostings(reqAppId(), acc.getId(), page, size));
     }
 
     /** 手动触发单资产对账(B5,恒等式+O14+快照;T+1 由 scheduler 自动跑) */
@@ -130,6 +154,19 @@ public class BenefitAssetsOpsController {
         public void setExtOrderId(String extOrderId) { this.extOrderId = extOrderId; }
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
+    }
+
+    /** OPS token 语境的 app_id(与 runtime 同款解析) */
+    private Long reqAppId() {
+        Object claim = fun.commons.framework4j.accesstoken.context.TokenContext.getClaim("app_id");
+        if (claim == null) return null;
+        if (claim instanceof Long l) return l;
+        if (claim instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(String.valueOf(claim));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private UbmxAsset toEntity(OpsAssetRequest req) {
