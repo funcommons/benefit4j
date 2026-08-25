@@ -126,4 +126,15 @@ public class Benefit4jAutoConfiguration {
     public BenefitOpsClient remoteBenefitOpsClient(Benefit4jProperties properties, fun.commons.framework4j.transport.HttpTransport transport) {
         return new RemoteBenefitOpsClient(properties, transport);
     }
+
+    // ==== TraceLog (framework4j-tracelog): 控制台 API 鉴权, 仅 OPS token 可用 ====
+    // 业务方声明同名 Bean 即可覆盖
+    @Bean("traceLogAuthValidator")
+    @ConditionalOnProperty(prefix = "framework4j.tracelog", name = "enabled", havingValue = "true")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(
+            fun.commons.framework4j.tracelog.config.TraceLogAuthValidator.class)
+    public fun.commons.framework4j.tracelog.config.TraceLogAuthValidator benefit4jTraceLogAuthValidator(
+            org.springframework.beans.factory.ObjectProvider<fun.commons.framework4j.accesstoken.config.AccessTokenProperties> accessTokenPropertiesProvider) {
+        return new fun.commons.benefit4j.tracelog.Benefit4jTraceLogAuthValidator(accessTokenPropertiesProvider);
+    }
 }

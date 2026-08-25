@@ -71,7 +71,7 @@ framework4j:
     redis-name: default
     secret-key: ${JWT_SECRET:changeme_super_secret_key_32_chars_long}
     hash-salt: ${HASH_SALT:salt}
-    exclude-path-patterns: ["/benefit/api/v1/auth/token", "/benefit/api/v1/ops/health", "/swagger-ui/**", "/v3/api-docs/**"]
+    exclude-path-patterns: ["/benefit/api/v1/auth/token", "/benefit/api/v1/ops/health", "/swagger-ui/**", "/v3/api-docs/**", "/tracelog", "/tracelog/**"]   # tracelog 控制台静态页放行 (其 API /api/logs/** 仍走 token + OPS 鉴权)
     policies:
       APP:
         key: [app_id]
@@ -113,6 +113,24 @@ framework4j:
   audit:
     enabled: true
     table-name: ubmp_audit_log
+  # 动态追踪日志: 按 traceId/URL/userId 临时提权 DEBUG, 日志聚合 Redis, 开关自动过期
+  # 控制台 http://localhost:9200/tracelog/index.html (API /api/logs/** 需 OPS token, Benefit4jTraceLogAuthValidator)
+  tracelog:
+    enabled: true
+    redis-name: default
+    storage:
+      key-prefix: benefit4j:trace_log     # 日志 List key: benefit4j:trace_log:{traceId}
+    collection:
+      fallback-dir: /tmp/benefit4j-tracelog-fallback   # Redis 故障降级目录 (容器化需挂载)
+    sync:
+      channel: benefit4j:channel:log_switch            # 开关广播频道 (注意是 sync 段, 非 switch)
+    elevation:
+      allowed-packages:
+        - fun.commons.benefit4j                        # 提权作用域限业务包
+      default-level: DEBUG
+    api:
+      require-auth: true                               # 默认即 true, 显式声明 (OPS-only, 未配 Validator 启动 fail-fast)
+      max-return-logs: 500
   rate-limit:
     enabled: true             # 压测已恢复
     redis-name: default

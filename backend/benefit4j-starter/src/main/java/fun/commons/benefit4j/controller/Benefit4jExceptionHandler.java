@@ -56,6 +56,14 @@ public class Benefit4jExceptionHandler {
         return ApiResponse.fail(400, ex.getMessage());
     }
 
+    /** 权限不足 (tracelog 控制台 API 等非 token 体系鉴权失败) → 403 */
+    @ExceptionHandler(SecurityException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleSecurity(SecurityException ex) {
+        log.warn("[Exception] 权限不足: {}", ex.getMessage());
+        return ApiResponse.fail(403, "权限不足");
+    }
+
     /** 兜底: 未捕获异常 → 500 + trace_id */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
