@@ -45,6 +45,9 @@ import java.util.TreeMap;
 @Service
 public class PostingService {
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper OUTBOX_JSON =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
     private final UbmxTxOrderMapper txOrderMapper;
     private final UbmxPostingMapper postingMapper;
     private final UbmxAccountMapper accountMapper;
@@ -202,7 +205,33 @@ public class PostingService {
         result.setTxType(cmd.getTxType());
         result.setLegs(views);
         fillSnapshot(gate.getId(), fingerprint, result);
+        writeOutbox(cmd, result);
         return result;
+    }
+
+    /** B6: 事务内写 outbox 事件(复用 ubmp_outbox,消费端按 txId 幂等) */
+    private void writeOutbox(PostingCommand cmd, PostingResult result) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("txId", result.getTxId());
+        payload.put("txType", result.getTxType());
+        payload.put("extOrderId", cmd.getExtOrderId());
+        List<Map<String, Object>> legs = new ArrayList<>();
+        for (PostingResult.LegView v : result.getLegs()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("legSeq", v.getLegSeq());
+            m.put("assetCode", v.getAssetCode());
+            m.put("amount", v.getAmount().toPlainString());
+            m.put("srcAccountId", v.getSrcAccountId());
+            m.put("dstAccountId", v.getDstAccountId());
+            legs.add(m);
+        }
+        payload.put("legs", legs);
+        try {
+            String json = OUTBOX_JSON.writeValueAsString(payload);
+            postingMapper.insertOutbox(IdWorker.getId(), result.getTxId(), json);
+        } catch (Exception e) {
+            log.error("[assets][outbox] 事件序列化失败(不阻断记账): txId={}", result.getTxId(), e);
+        }
     }
 
     // ---------- 幂等回放(O10) ----------
@@ -217,6 +246,11 @@ public class PostingService {
             // 并发窗口极小: 唯一键冲突但行不可见,按冲突处理
             throw new AssetsException(AssetsException.IDEMPOTENCY_CONFLICT,
                     "幂等键冲突: " + cmd.getExtOrderId());
+        }
+        if ("FAILED".equals(old.getStatus())) {
+            // O6: 已释放键永久隔离,同号禁复用(防双记账);新单必须换号
+            throw new AssetsException(AssetsException.IDEMPOTENCY_CONFLICT,
+                    "幂等键已被 OPS 释放隔离,禁止复用,请更换订单号: " + cmd.getExtOrderId());
         }
         Object snapshot = old.getResultSnapshot();
         if (snapshot instanceof Map<?, ?> map

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import fun.commons.benefit4j.assets.entity.UbmxTxOrder;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface UbmxTxOrderMapper extends BaseMapper<UbmxTxOrder> {
@@ -17,4 +19,13 @@ public interface UbmxTxOrderMapper extends BaseMapper<UbmxTxOrder> {
             + "VALUES (#{id}, #{appId}, #{extOrderId}, #{txType}, #{txId}, #{status}) "
             + "ON CONFLICT (app_id, ext_order_id) DO NOTHING")
     int insertIgnore(UbmxTxOrder gate);
+
+    /** O6 幂等释放: SUCCESS → FAILED(仅 OPS 纠错;FAILED 键引擎侧永久禁用防双记) */
+    @Update("/*traceid=assets,topic=tx_release*/ "
+            + "UPDATE ubmx_tx_order SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP, "
+            + "result_snapshot = COALESCE(result_snapshot, '{}'::jsonb) "
+            + "|| jsonb_build_object('releaseReason', #{reason}::text) "
+            + "WHERE app_id = #{appId} AND ext_order_id = #{extOrderId} AND status = 'SUCCESS'")
+    int releaseKey(@Param("appId") Long appId, @Param("extOrderId") String extOrderId,
+                   @Param("reason") String reason);
 }

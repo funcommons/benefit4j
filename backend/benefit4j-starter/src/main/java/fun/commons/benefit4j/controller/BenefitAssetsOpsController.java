@@ -30,6 +30,8 @@ import java.util.List;
 public class BenefitAssetsOpsController {
 
     private final AssetRegistryService registry;
+    private final fun.commons.benefit4j.assets.service.AssetsReconcileService reconcileService;
+    private final fun.commons.benefit4j.assets.service.AssetsIdempotencyService idempotencyService;
 
     @PostMapping("/assets")
     @Auditable(action = "ASSETS_CREATE", targetType = "asset", targetIdSpel = "#req.code")
@@ -68,6 +70,45 @@ public class BenefitAssetsOpsController {
     public ApiResponse<Void> resume(@PathVariable("code") String code) {
         registry.resume(code);
         return ApiResponse.success();
+    }
+
+    /** 手动触发单资产对账(B5,恒等式+O14+快照;T+1 由 scheduler 自动跑) */
+    @PostMapping("/reconcile/run")
+    @Auditable(action = "ASSETS_RECONCILE", targetType = "reconcile", targetIdSpel = "#req.assetCode")
+    public ApiResponse<Object> runReconcile(@RequestBody ReconcileRunRequest req) {
+        return ApiResponse.success(reconcileService.runOnce(req.getAppId(), req.getAssetCode()));
+    }
+
+    /** 幂等键释放(O6,运维纠错;释放后同号永久禁用,新单必须换号) */
+    @PostMapping("/idempotency/release")
+    @Auditable(action = "ASSETS_IDEMPOTENCY_RELEASE", targetType = "tx_order", targetIdSpel = "#req.extOrderId")
+    public ApiResponse<Object> releaseIdempotency(@RequestBody IdempotencyReleaseRequest req) {
+        return ApiResponse.success(idempotencyService.release(req.getAppId(), req.getExtOrderId(), req.getReason()));
+    }
+
+    /** 对账手动触发请求 */
+    public static class ReconcileRunRequest {
+        private Long appId;
+        private String assetCode;
+
+        public Long getAppId() { return appId; }
+        public void setAppId(Long appId) { this.appId = appId; }
+        public String getAssetCode() { return assetCode; }
+        public void setAssetCode(String assetCode) { this.assetCode = assetCode; }
+    }
+
+    /** 幂等释放请求 */
+    public static class IdempotencyReleaseRequest {
+        private Long appId;
+        private String extOrderId;
+        private String reason;
+
+        public Long getAppId() { return appId; }
+        public void setAppId(Long appId) { this.appId = appId; }
+        public String getExtOrderId() { return extOrderId; }
+        public void setExtOrderId(String extOrderId) { this.extOrderId = extOrderId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
     }
 
     private UbmxAsset toEntity(OpsAssetRequest req) {

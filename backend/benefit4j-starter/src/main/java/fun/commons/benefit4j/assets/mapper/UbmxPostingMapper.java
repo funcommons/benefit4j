@@ -22,4 +22,10 @@ public interface UbmxPostingMapper extends BaseMapper<UbmxPosting> {
             + "AND created_at >= #{since}")
     java.math.BigDecimal sumOutSince(@Param("appId") Long appId, @Param("accountId") Long accountId,
                                      @Param("since") java.time.OffsetDateTime since);
+
+    /** B6: 记账事务内写 outbox 事件(复用权益域 ubmp_outbox) */
+    @org.apache.ibatis.annotations.Insert("/*traceid=assets,topic=outbox*/ "
+            + "INSERT INTO ubmp_outbox (id, aggregate_type, aggregate_id, event_type, payload) "
+            + "VALUES (#{id}, 'assets_tx', #{txId}, 'ASSETS_TX_COMMITTED', #{payload}::jsonb)")
+    int insertOutbox(@Param("id") Long id, @Param("txId") Long txId, @Param("payload") String payload);
 }

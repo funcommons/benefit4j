@@ -20,6 +20,7 @@ final class AssetsMigrations {
             "V1.3.3__init_assets_tx_order.sql",
             "V1.3.4__init_assets_pre_consume.sql",
             "V1.3.5__init_assets_freeze.sql",
+            "V1.3.6__init_reconcile.sql",
     };
 
     private AssetsMigrations() {
