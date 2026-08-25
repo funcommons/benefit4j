@@ -45,6 +45,7 @@ public class BenefitAssetsRuntimeController {
     private final AccountService accountService;
     private final AssetsQueryService queryService;
     private final fun.commons.benefit4j.assets.service.AssetsExchangeService exchangeService;
+    private final fun.commons.benefit4j.assets.service.AssetsFreezeService freezeService;
 
     /** 入账/通用记账(钱包中台 issue 模板 / 运营发奖,§4.3.1) */
     @PostMapping("/runtime/issue")
@@ -87,6 +88,26 @@ public class BenefitAssetsRuntimeController {
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.PreConsumeDualRequest req) {
         req.setAppId(appId());
         return ApiResponse.success(preConsumeService.preConsumeDual(req));
+    }
+
+    /** 业务冻结(§4.3: 钱包中台提现申请/售后/风控,reason 分桶) */
+    @PostMapping("/runtime/freeze")
+    @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_FREEZE", targetType = "freeze", targetIdSpel = "#req.freezeNo")
+    public ApiResponse<Object> postFreeze(
+            @Valid @RequestBody fun.commons.benefit4j.assets.dto.FreezeRequest req) {
+        req.setAppId(appId());
+        return ApiResponse.success(freezeService.freeze(req));
+    }
+
+    /** 解冻(§4.3: RELEASE 回余额 / CONSUME 提现成功出账;支持部分释放) */
+    @PostMapping("/runtime/unfreeze")
+    @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_UNFREEZE", targetType = "freeze", targetIdSpel = "#req.freezeNo")
+    public ApiResponse<Object> postUnfreeze(
+            @Valid @RequestBody fun.commons.benefit4j.assets.dto.UnfreezeRequest req) {
+        req.setAppId(appId());
+        return ApiResponse.success(freezeService.unfreeze(req));
     }
 
     /** 兑换(§3.2: 双腿原子,汇率由调用方定价) */
