@@ -32,6 +32,7 @@ public class BenefitAssetsOpsController {
     private final AssetRegistryService registry;
     private final fun.commons.benefit4j.assets.service.AssetsReconcileService reconcileService;
     private final fun.commons.benefit4j.assets.service.AssetsIdempotencyService idempotencyService;
+    private final fun.commons.benefit4j.assets.service.AccountService accountService;
 
     @PostMapping("/assets")
     @Auditable(action = "ASSETS_CREATE", targetType = "asset", targetIdSpel = "#req.code")
@@ -77,6 +78,26 @@ public class BenefitAssetsOpsController {
     @Auditable(action = "ASSETS_RECONCILE", targetType = "reconcile", targetIdSpel = "#req.assetCode")
     public ApiResponse<Object> runReconcile(@RequestBody ReconcileRunRequest req) {
         return ApiResponse.success(reconcileService.runOnce(req.getAppId(), req.getAssetCode()));
+    }
+
+    /** F1 授信调额(资产需开 can_credit;双签审计为后续项,当前 OPS token + @Auditable) */
+    @PatchMapping("/accounts/{account_id}/credit-limit")
+    @Auditable(action = "ASSETS_CREDIT_LIMIT", targetType = "account", targetIdSpel = "#account_id")
+    public ApiResponse<Void> patchCreditLimit(@PathVariable("account_id") Long accountId,
+            @RequestBody CreditLimitRequest req) {
+        accountService.updateCreditLimit(req.getAppId(), accountId, req.getCreditLimit());
+        return ApiResponse.success();
+    }
+
+    /** 调额请求 */
+    public static class CreditLimitRequest {
+        private Long appId;
+        private java.math.BigDecimal creditLimit;
+
+        public Long getAppId() { return appId; }
+        public void setAppId(Long appId) { this.appId = appId; }
+        public java.math.BigDecimal getCreditLimit() { return creditLimit; }
+        public void setCreditLimit(java.math.BigDecimal creditLimit) { this.creditLimit = creditLimit; }
     }
 
     /** 幂等键释放(O6,运维纠错;释放后同号永久禁用,新单必须换号) */

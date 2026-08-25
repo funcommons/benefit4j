@@ -49,7 +49,7 @@ public class PostingServiceIT extends BaseMapperTest {
     @Autowired
     private UbmxPostingMapper postingMapper;
 
-    /** 用例级临时资产(CNY_T),已注册则忽略 */
+    /** 用例级临时资产,已注册则忽略 */
     private void ensureAsset(String code) {
         try {
             fun.commons.benefit4j.assets.entity.UbmxAsset a = new fun.commons.benefit4j.assets.entity.UbmxAsset();
@@ -57,6 +57,7 @@ public class PostingServiceIT extends BaseMapperTest {
             a.setName("测试-" + code);
             a.setAssetType("VIRTUAL");
             a.setPrecision(2);
+            if ("TRN_T".equals(code)) a.setCanTransfer(true);
             registry.createAsset(a);
         } catch (org.springframework.dao.DuplicateKeyException ignore) {
             // 已注册
@@ -206,20 +207,35 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testCreditLimitExtendsFloor() {
+        ensureAssetWithCredit();   // can_credit=true 专用资产
+        String asset = "CRD_T";
         String order = "IT-CRED-" + uniqueAppid();
         Long uid = uniqueLongId();
-        UbmxAccount acc = accountService.getOrCreateAccount(app(), "USER", uid, "POINTS");
-        // 授信 10(F1 列 P1 只走校验路径)
-        acc.setCreditLimit(new BigDecimal("10"));
+        UbmxAccount acc = accountService.getOrCreateAccount(app(), "USER", uid, asset);
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("10"));
 
         // 余额 0 + 授信 10 → 可扣 10.5? 不行;扣 10 可以
         assertThatThrownBy(() -> postingService.commitTx(cmd(order + "X", "CONSUME",
-                leg("user:" + uid, "issue:POINTS", "POINTS", "10.5"))))
+                leg("user:" + uid, "fee:" + asset, asset, "10.5"))))
                 .isInstanceOf(AssetsException.class);
         postingService.commitTx(cmd(order, "CONSUME",
-                leg("user:" + uid, "issue:POINTS", "POINTS", "10")));
+                leg("user:" + uid, "fee:" + asset, asset, "10")));
         assertThat(balanceOf(acc.getId())).isEqualByComparingTo("-10");
+    }
+
+    /** can_credit=true 专用资产(B7 后 POINTS 不允许授信) */
+    private void ensureAssetWithCredit() {
+        try {
+            fun.commons.benefit4j.assets.entity.UbmxAsset a = new fun.commons.benefit4j.assets.entity.UbmxAsset();
+            a.setCode("CRD_T");
+            a.setName("授信测试");
+            a.setAssetType("VIRTUAL");
+            a.setPrecision(2);
+            a.setCanCredit(true);
+            registry.createAsset(a);
+        } catch (org.springframework.dao.DuplicateKeyException ignore) {
+            // 已注册
+        }
     }
 
     @Test
@@ -237,11 +253,13 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testConcurrentTransfers_noDeadlock() throws Exception {
+        // B7 后 TRANSFER 需 can_transfer=true(POINTS 种子为 false),用专用资产
+        ensureAsset("TRN_T");
         Long a = uniqueLongId();
         Long b = uniqueLongId();
         postingService.commitTx(cmd("IT-DL-PREP-" + uniqueAppid(), "ISSUE",
-                leg("issue:POINTS", "user:" + a, "POINTS", "100"),
-                leg("issue:POINTS", "user:" + b, "POINTS", "100")));
+                leg("issue:TRN_T", "user:" + a, "TRN_T", "100"),
+                leg("issue:TRN_T", "user:" + b, "TRN_T", "100")));
 
         // 双向互转 20 轮:A→B 与 B→A 并发,按 id 升序锁应无死锁
         int rounds = 20;
@@ -257,15 +275,15 @@ public class PostingServiceIT extends BaseMapperTest {
         }
         assertThat(ok.get()).isEqualTo(rounds * 2);
         // 守恒: 总额 200 不变
-        BigDecimal total = balanceOf(accountService.getOrCreateAccount(app(), "USER", a, "POINTS").getId())
-                .add(balanceOf(accountService.getOrCreateAccount(app(), "USER", b, "POINTS").getId()));
+        BigDecimal total = balanceOf(accountService.getOrCreateAccount(app(), "USER", a, "TRN_T").getId())
+                .add(balanceOf(accountService.getOrCreateAccount(app(), "USER", b, "TRN_T").getId()));
         assertThat(total).isEqualByComparingTo("200");
     }
 
     private void transferLoop(int rounds, Long from, Long to, AtomicInteger ok) {
         for (int i = 0; i < rounds; i++) {
             postingService.commitTx(cmd("IT-DL-" + from + "-" + i + "-" + uniqueAppid(), "TRANSFER",
-                    leg("user:" + from, "user:" + to, "POINTS", "1")));
+                    leg("user:" + from, "user:" + to, "TRN_T", "1")));
             ok.incrementAndGet();
         }
     }

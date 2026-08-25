@@ -53,6 +53,7 @@ public class PostingService {
     private final UbmxAccountMapper accountMapper;
     private final AccountService accountService;
     private final AssetsLimitGuard limitGuard;
+    private final AssetRegistryService registryService;
     private final TransactionTemplate txTemplate;
     private final RetryTemplate retry;
 
@@ -61,12 +62,14 @@ public class PostingService {
                           UbmxAccountMapper accountMapper,
                           AccountService accountService,
                           AssetsLimitGuard limitGuard,
+                          AssetRegistryService registryService,
                           PlatformTransactionManager txManager) {
         this.txOrderMapper = txOrderMapper;
         this.postingMapper = postingMapper;
         this.accountMapper = accountMapper;
         this.accountService = accountService;
         this.limitGuard = limitGuard;
+        this.registryService = registryService;
         this.txTemplate = new TransactionTemplate(txManager);
         // O2/O12: 指数退避 50ms→200ms→800ms,仅可安全重试的两类异常
         this.retry = RetryTemplate.builder()
@@ -100,8 +103,30 @@ public class PostingService {
             return replayOrConflict(cmd, fingerprint);
         }
 
-        // 1. 腿解析(lazy 开户,识别边界户)
         List<PostingCommand.LegSpec> specs = cmd.getLegs();
+        // 0.5 B7 能力兜底: txType × can_*(API 层强校验之外的引擎防线)
+        String requiredCapability = switch (cmd.getTxType() == null ? "" : cmd.getTxType()) {
+            case "CONSUME" -> "canPay";
+            case "TRANSFER" -> "canTransfer";
+            case "EXCHANGE" -> "canExchange";
+            default -> null;   // ISSUE/REFUND/ADJUST/FREEZE 等不设限
+        };
+        if (requiredCapability != null) {
+            for (PostingCommand.LegSpec leg : specs) {
+                var asset = registryService.getActiveRequired(leg.getAssetCode());
+                boolean allowed = switch (requiredCapability) {
+                    case "canPay" -> Boolean.TRUE.equals(asset.getCanPay());
+                    case "canTransfer" -> Boolean.TRUE.equals(asset.getCanTransfer());
+                    default -> Boolean.TRUE.equals(asset.getCanExchange());
+                };
+                if (!allowed) {
+                    throw new AssetsException(AssetsException.ASSET_PRIVILEGE_DENIED,
+                            "资产能力位不足: asset=" + leg.getAssetCode() + " 需要 " + requiredCapability);
+                }
+            }
+        }
+
+        // 1. 腿解析(lazy 开户,识别边界户)
         int n = specs.size();
         UbmxAccount[] src = new UbmxAccount[n];
         UbmxAccount[] dst = new UbmxAccount[n];

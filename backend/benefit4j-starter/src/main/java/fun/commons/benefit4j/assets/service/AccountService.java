@@ -84,12 +84,22 @@ public class AccountService {
         return acc;
     }
 
-    /** 授信额度调整(F1,OPS 调额入口,Step5 接双签审计) */
+    /**
+     * 授信额度调整(F1,OPS 调额入口;双签审计为后续项,当前 OPS token + @Auditable)。
+     * 能力位强校验: 资产未开放 can_credit 不得授信。
+     */
     public void updateCreditLimit(Long appId, Long accountId, BigDecimal creditLimit) {
         if (creditLimit == null || creditLimit.signum() < 0) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "授信额度不可为负");
         }
         UbmxAccount acc = getAccount(accountId);
+        if (creditLimit.signum() > 0) {
+            var asset = registry.getRequired(acc.getAssetCode());
+            if (!Boolean.TRUE.equals(asset.getCanCredit())) {
+                throw new AssetsException(AssetsException.ASSET_PRIVILEGE_DENIED,
+                        "资产未开放授信能力: " + acc.getAssetCode());
+            }
+        }
         acc.setCreditLimit(creditLimit);
         accountMapper.updateById(acc);
     }

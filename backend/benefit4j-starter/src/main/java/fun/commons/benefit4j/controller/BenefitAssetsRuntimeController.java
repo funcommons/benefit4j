@@ -120,6 +120,27 @@ public class BenefitAssetsRuntimeController {
         return ApiResponse.success(exchangeService.exchange(req));
     }
 
+    /** 还款(F1: credit:{asset} → user 授信释放,负余额回正;credit 为 BOUNDARY 不记账) */
+    @PostMapping("/runtime/repay")
+    @RateLimit(limit = 100, window = "1m", scope = "APP")
+    @Auditable(action = "ASSETS_REPAY", targetType = "tx_order", targetIdSpel = "#req.requestId")
+    public ApiResponse<Map<String, Object>> postRepay(
+            @Valid @RequestBody fun.commons.benefit4j.assets.dto.RepayRequest req) {
+        PostingCommand cmd = new PostingCommand();
+        cmd.setAppId(appId());
+        cmd.setExtOrderId(req.getRequestId());
+        cmd.setTxType("REPAY");
+        PostingCommand.LegSpec l = new PostingCommand.LegSpec();
+        l.setSrc("credit:" + req.getAssetCode());
+        l.setDst(req.getAccountRef());
+        l.setAssetCode(req.getAssetCode());
+        l.setAmount(req.getAmount());
+        cmd.setLegs(List.of(l));
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("txId", postingService.commitTx(cmd).getTxId());
+        return ApiResponse.success(data);
+    }
+
     /** 结算(confirm 实际额,diff 自动回补/补扣) */
     @PostMapping("/runtime/settle")
     @RateLimit(limit = 100, window = "1m", scope = "APP")

@@ -773,7 +773,7 @@ P1 即可承接 MMagiX 单扣场景,P2 承接双扣全量。钱包中台独立�
 **F1 授信负余额 · 定案口径**(P1 落列,P2 实现完整能力):
 - 授信户:`credit_limit > 0` 且 `asset.can_credit = true`,余额可负至 `-credit_limit`——**与防超发共用同一道 DB CHECK 闸**,无新增一致性风险
 - 授信调整:走 OPS `ADJUST` + 双签(§7.3 已预留);多笔授信叠加/独立过期 → P3 `ubmx_credit_grant` 明细表(结构同 `ubmx_freeze`)
-- 还款分录:`user:{uid}:CNY` → `credit:CNY`(`credit:*` 为 BOUNDARY 边界户,复用 O11 豁免,不引入新锁点)
+- 还款分录:`credit:{asset}` → `user:{uid}:CNY`(授信释放语义;`credit:*` 为 BOUNDARY 边界户,复用 O11 豁免,不引入新锁点。v0.4 原文方向写反,实现时更正)
 - 风控联动:`balance < 0` 时强制禁提现/转账(校验前置余额符号判断)
 - **不做**: 计息、动态授信风控评分(风险域职责,不属于资产域)
 

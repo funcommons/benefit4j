@@ -168,16 +168,24 @@ public class PreConsumeServiceIT extends BaseMapperTest {
 
     @Test
     public void testSettle_overAndInsufficient_partialSettled() {
+        // can_credit=true 专用资产(B7 后 POINTS 不允许授信)
+        ensureCreditAsset("CRD_P");
         Long uid = uniqueLongId();
-        UbmxAccount acc = fund(uid, "100");
+        postingService.commitTx(cmd("IT-PC-6F-" + uniqueAppid(), "ISSUE",
+                leg("issue:CRD_P", "user:" + uid, "CRD_P", "100")));
+        UbmxAccount acc = accountService.getOrCreateAccount(app(), "USER", uid, "CRD_P");
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("10"));
-        String req = "IT-PC-6-" + uniqueAppid();
-        preConsumeService.preConsume(pre(uid, req, "30"));
+        PreConsumeRequest pre = new PreConsumeRequest();
+        pre.setAppId(app());
+        pre.setRequestId("IT-PC-6-" + uniqueAppid());
+        pre.setAccountRef("user:" + uid);
+        pre.setAssetCode("CRD_P");
+        pre.setEstimated(new BigDecimal("30"));
+        preConsumeService.preConsume(pre);
         // 可用 = balance 70 + credit 10 = 80;actual=200 → need 170 > 80 → PARTIAL,扣满 80
-
         SettleRequest s = new SettleRequest();
         s.setAppId(app());
-        s.setRequestId(req);
+        s.setRequestId(pre.getRequestId());
         s.setActual(new BigDecimal("200"));
         PreConsumeView v = preConsumeService.settle(s);
 
@@ -185,6 +193,27 @@ public class PreConsumeServiceIT extends BaseMapperTest {
         UbmxAccount after = accountService.getAccount(acc.getId());
         assertThat(after.getBalance()).isEqualByComparingTo("-10");   // 扣到授信下限
         assertThat(after.getFrozen()).isEqualByComparingTo("0");
+    }
+
+    private void ensureCreditAsset(String code) {
+        try {
+            var a = new fun.commons.benefit4j.assets.entity.UbmxAsset();
+            a.setCode(code);
+            a.setName("授信-" + code);
+            a.setAssetType("VIRTUAL");
+            a.setPrecision(2);
+            a.setCanCredit(true);
+            registry2().createAsset(a);
+        } catch (org.springframework.dao.DuplicateKeyException ignore) {
+            // 已注册
+        }
+    }
+
+    @Autowired
+    private fun.commons.benefit4j.assets.service.AssetRegistryService registryRef;
+
+    private fun.commons.benefit4j.assets.service.AssetRegistryService registry2() {
+        return registryRef;
     }
 
     @Test
