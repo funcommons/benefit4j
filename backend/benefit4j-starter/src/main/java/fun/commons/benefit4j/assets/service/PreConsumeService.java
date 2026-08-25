@@ -46,6 +46,7 @@ public class PreConsumeService {
     private final UbmxPostingMapper postingMapper;
     private final UbmxAccountMapper accountMapper;
     private final AccountService accountService;
+    private final AssetsLimitGuard limitGuard;
     private final TransactionTemplate txTemplate;
     private final RetryTemplate retry;
 
@@ -53,11 +54,13 @@ public class PreConsumeService {
                              UbmxPostingMapper postingMapper,
                              UbmxAccountMapper accountMapper,
                              AccountService accountService,
+                             AssetsLimitGuard limitGuard,
                              PlatformTransactionManager txManager) {
         this.preConsumeMapper = preConsumeMapper;
         this.postingMapper = postingMapper;
         this.accountMapper = accountMapper;
         this.accountService = accountService;
+        this.limitGuard = limitGuard;
         this.txTemplate = new TransactionTemplate(txManager);
         this.retry = RetryTemplate.builder()
                 .maxAttempts(3)
@@ -108,6 +111,7 @@ public class PreConsumeService {
                     "预扣余额不足: balance=" + acc.getBalance() + " credit=" + acc.getCreditLimit()
                             + " estimated=" + req.getEstimated());
         }
+        limitGuard.checkOut(acc, req.getAssetCode(), req.getEstimated());   // B4 单笔/累计限额
         accountMapper.adjustBalanceAndFrozen(acc.getId(), req.getEstimated().negate(), req.getEstimated());
         pc.setUserAccountId(acc.getId());
 
@@ -166,7 +170,9 @@ public class PreConsumeService {
                                     + " estimated=" + req.getEstimated());
                 }
             }
-            // 双侧同额挪移 balance→frozen(无中间户,§3.3 定案)
+            // B4 双侧限额 + 双侧同额挪移 balance→frozen(无中间户,§3.3 定案)
+            limitGuard.checkOut(userAcc, req.getAssetCode(), req.getEstimated());
+            limitGuard.checkOut(tenantAcc, req.getAssetCode(), req.getEstimated());
             accountMapper.adjustBalanceAndFrozen(userAcc.getId(), req.getEstimated().negate(), req.getEstimated());
             accountMapper.adjustBalanceAndFrozen(tenantAcc.getId(), req.getEstimated().negate(), req.getEstimated());
             insertPosting(pc.getTxId(), "FREEZE", buildReq(req.getAppId(), req.getRequestId(), req.getAssetCode()),

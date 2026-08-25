@@ -107,6 +107,7 @@ CREATE TABLE ubmx_asset (
     -- 例:{"singleMax":"10000.00","dailyMax":"50000.00","monthlyMax":"200000.00"}
     -- 校验时机: PostIssue/PostPreConsume 前置校验当前累计值
     -- 口径: 日/月累计按 Asia/Shanghai 营业日(法币合规要求,不取服务器时区)
+    -- 方向: 扁平键 = 入账侧(AML 充值限额);出账侧用 {"out":{...}} 显式分组,未配 out 不拦(P2 实现)
     limit_policy    JSONB,
     description     VARCHAR(500),
     status          VARCHAR(8)   NOT NULL DEFAULT 'ACTIVE'

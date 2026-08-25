@@ -14,6 +14,7 @@ public class AssetsException extends RuntimeException {
     public static final String IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT";
     public static final String PRE_CONSUME_NOT_FOUND = "PRE_CONSUME_NOT_FOUND";
     public static final String FREEZE_NOT_FOUND = "FREEZE_NOT_FOUND";
+    public static final String LIMIT_EXCEEDED = "LIMIT_EXCEEDED";
     public static final String ASSET_PRIVILEGE_DENIED = "INSUFFICIENT_PRIVILEGE";
 
     private final String code;

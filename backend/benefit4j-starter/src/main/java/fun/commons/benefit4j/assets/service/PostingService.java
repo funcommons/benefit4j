@@ -49,6 +49,7 @@ public class PostingService {
     private final UbmxPostingMapper postingMapper;
     private final UbmxAccountMapper accountMapper;
     private final AccountService accountService;
+    private final AssetsLimitGuard limitGuard;
     private final TransactionTemplate txTemplate;
     private final RetryTemplate retry;
 
@@ -56,11 +57,13 @@ public class PostingService {
                           UbmxPostingMapper postingMapper,
                           UbmxAccountMapper accountMapper,
                           AccountService accountService,
+                          AssetsLimitGuard limitGuard,
                           PlatformTransactionManager txManager) {
         this.txOrderMapper = txOrderMapper;
         this.postingMapper = postingMapper;
         this.accountMapper = accountMapper;
         this.accountService = accountService;
+        this.limitGuard = limitGuard;
         this.txTemplate = new TransactionTemplate(txManager);
         // O2/O12: 指数退避 50ms→200ms→800ms,仅可安全重试的两类异常
         this.retry = RetryTemplate.builder()
@@ -143,6 +146,11 @@ public class PostingService {
                                 + " credit=" + acc.getCreditLimit()
                                 + " delta=" + entry.getValue());
             }
+        }
+
+        // 3.5 B4 限额校验(腿级: src 出账 / dst 入账;BOUNDARY 跳过;未配 limit_policy 不拦)
+        for (int i = 0; i < n; i++) {
+            limitGuard.checkLeg(src[i], dst[i], specs.get(i).getAssetCode(), specs.get(i).getAmount());
         }
 
         // 4. 执行: 更新 NORMAL 户 + 逐腿写 posting(running 记 balance_after)
