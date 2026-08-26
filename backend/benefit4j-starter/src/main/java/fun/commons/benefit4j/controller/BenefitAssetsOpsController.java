@@ -1,26 +1,20 @@
 package fun.commons.benefit4j.controller;
 
-import fun.commons.benefit4j.assets.dto.OpsAssetRequest;
-import fun.commons.benefit4j.assets.entity.UbmxAsset;
-import fun.commons.benefit4j.assets.service.AssetRegistryService;
 import fun.commons.framework4j.accesstoken.annotation.RequiresToken;
 import fun.commons.framework4j.audit.annotation.Auditable;
 import fun.commons.framework4j.web.ApiResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 /**
- * assets 域 OPS API(assets-design §4.1): 资产注册中心管理(运营端)。
+ * assets 域运维通道(assets-design §4.1): 手动对账 / 幂等键释放 / 授信调额。
+ * OPS 型 token(由运维签发,登录端点不发)—— 运营页面用的资产 CRUD/查询
+ * 在 {@link BenefitAssetsPlatformController}(APP 型,平台登录可用)。
  * 调账(ADJUST)双签审计为 P2;FIAT 创建受 AssetsFiatGuard 运行时拦截。
  */
 @RestController
@@ -29,73 +23,9 @@ import java.util.List;
 @RequiresToken(value = "OPS", type = "access")
 public class BenefitAssetsOpsController {
 
-    private final AssetRegistryService registry;
     private final fun.commons.benefit4j.assets.service.AssetsReconcileService reconcileService;
     private final fun.commons.benefit4j.assets.service.AssetsIdempotencyService idempotencyService;
     private final fun.commons.benefit4j.assets.service.AccountService accountService;
-    private final fun.commons.benefit4j.assets.service.AssetsQueryService queryService;
-
-    @PostMapping("/assets")
-    @Auditable(action = "ASSETS_CREATE", targetType = "asset", targetIdSpel = "#req.code")
-    public ApiResponse<UbmxAsset> postAssets(@Valid @RequestBody OpsAssetRequest req) {
-        return ApiResponse.success(registry.createAsset(toEntity(req)));
-    }
-
-    @GetMapping("/assets")
-    public ApiResponse<List<UbmxAsset>> getAssets(
-            @RequestParam(value = "asset_type", required = false) String assetType,
-            @RequestParam(value = "status", required = false) String status) {
-        return ApiResponse.success(registry.list(assetType, status));
-    }
-
-    @GetMapping("/assets/{code}")
-    public ApiResponse<UbmxAsset> getAsset(@PathVariable("code") String code) {
-        return ApiResponse.success(registry.getRequired(code));
-    }
-
-    /** 局部更新(白名单字段,null 跳过) */
-    @PatchMapping("/assets/{code}")
-    @Auditable(action = "ASSETS_PATCH", targetType = "asset", targetIdSpel = "#code")
-    public ApiResponse<UbmxAsset> patchAsset(@PathVariable("code") String code,
-            @RequestBody OpsAssetRequest req) {
-        return ApiResponse.success(registry.patchAsset(code, toEntity(req)));
-    }
-
-    @PostMapping("/assets/{code}/suspend")
-    @Auditable(action = "ASSETS_SUSPEND", targetType = "asset", targetIdSpel = "#code")
-    public ApiResponse<Void> suspend(@PathVariable("code") String code) {
-        registry.suspend(code);
-        return ApiResponse.success();
-    }
-
-    @PostMapping("/assets/{code}/resume")
-    public ApiResponse<Void> resume(@PathVariable("code") String code) {
-        registry.resume(code);
-        return ApiResponse.success();
-    }
-
-    /** 运营查主体资产账户(P3 前端,OPS 只读;不开户) */
-    @GetMapping("/accounts")
-    public ApiResponse<List<fun.commons.benefit4j.assets.entity.UbmxAccount>> getAccounts(
-            @RequestParam("owner_type") String ownerType,
-            @RequestParam("owner_id") Long ownerId,
-            @RequestParam(value = "asset_code", required = false) String assetCode) {
-        return ApiResponse.success(queryService.listAccounts(reqAppId(), ownerType, ownerId, assetCode));
-    }
-
-    /** 运营查账户流水(P3 前端,OPS 只读;账户引用不存在返回空) */
-    @GetMapping("/postings")
-    public ApiResponse<Object> getPostings(
-            @RequestParam("account_ref") String accountRef,
-            @RequestParam("asset_code") String assetCode,
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
-        var acc = accountService.findRef(reqAppId(), accountRef, assetCode);
-        if (acc == null) {
-            return ApiResponse.success(List.of());
-        }
-        return ApiResponse.success(queryService.listPostings(reqAppId(), acc.getId(), page, size));
-    }
 
     /** 手动触发单资产对账(B5,恒等式+O14+快照;T+1 由 scheduler 自动跑) */
     @PostMapping("/reconcile/run")
@@ -154,37 +84,5 @@ public class BenefitAssetsOpsController {
         public void setExtOrderId(String extOrderId) { this.extOrderId = extOrderId; }
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
-    }
-
-    /** OPS token 语境的 app_id(与 runtime 同款解析) */
-    private Long reqAppId() {
-        Object claim = fun.commons.framework4j.accesstoken.context.TokenContext.getClaim("app_id");
-        if (claim == null) return null;
-        if (claim instanceof Long l) return l;
-        if (claim instanceof Number n) return n.longValue();
-        try {
-            return Long.parseLong(String.valueOf(claim));
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private UbmxAsset toEntity(OpsAssetRequest req) {
-        UbmxAsset a = new UbmxAsset();
-        a.setCode(req.getCode());
-        a.setName(req.getName());
-        a.setAssetType(req.getAssetType());
-        a.setPrecision(req.getPrecision());
-        a.setCanRecharge(req.getCanRecharge());
-        a.setCanWithdraw(req.getCanWithdraw());
-        a.setCanPay(req.getCanPay());
-        a.setCanTransfer(req.getCanTransfer());
-        a.setCanExchange(req.getCanExchange());
-        a.setCanCredit(req.getCanCredit());
-        a.setIssueMode(req.getIssueMode());
-        a.setExpirePolicy(req.getExpirePolicy());
-        a.setLimitPolicy(req.getLimitPolicy());
-        a.setDescription(req.getDescription());
-        return a;
     }
 }

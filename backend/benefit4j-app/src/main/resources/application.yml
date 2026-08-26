@@ -139,7 +139,7 @@ framework4j:
     default-limit: 100
     default-window: 1m
     default-algorithm: SLIDING_WINDOW
-    path-patterns: ["/benefit/api/v1/runtime/**", "/benefit/api/v1/assets/**"]   # assets 端点 @RateLimit 注解决定规则,路径须覆盖
+    path-patterns: ["/benefit/api/v1/runtime/**", "/benefit/api/v1/assets/**", "/benefit/api/v1/platform/assets/**"]   # assets 端点 @RateLimit 注解决定规则,路径须覆盖
     whitelist-paths: ["/benefit/api/v1/auth/token"]
 
 benefit4j:

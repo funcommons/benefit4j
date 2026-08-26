@@ -54,34 +54,34 @@ export interface AssetPosting {
   created_at?: string
 }
 
-// ---------- 资产注册中心(OPS) ----------
+// ---------- 资产注册中心(平台运营面,APP token) ----------
 
 export const getAssets = (params?: Record<string, any>) => {
-  return benefitClient.get<any, ApiResponse<AssetDefinition[]>>('benefit/api/v1/assets/ops/assets', { params })
+  return benefitClient.get<any, ApiResponse<AssetDefinition[]>>('benefit/api/v1/platform/assets', { params })
 }
 
 export const createAsset = (data: Partial<AssetDefinition>) => {
-  return benefitClient.post<any, ApiResponse<AssetDefinition>>('benefit/api/v1/assets/ops/assets', data)
+  return benefitClient.post<any, ApiResponse<AssetDefinition>>('benefit/api/v1/platform/assets', data)
 }
 
 export const patchAsset = (code: string, data: Partial<AssetDefinition>) => {
-  return benefitClient.patch<any, ApiResponse<AssetDefinition>>(`benefit/api/v1/assets/ops/assets/${code}`, data)
+  return benefitClient.patch<any, ApiResponse<AssetDefinition>>(`benefit/api/v1/platform/assets/${code}`, data)
 }
 
 export const suspendAsset = (code: string) => {
-  return benefitClient.post<any, ApiResponse<void>>(`benefit/api/v1/assets/ops/assets/${code}/suspend`)
+  return benefitClient.post<any, ApiResponse<void>>(`benefit/api/v1/platform/assets/${code}/suspend`)
 }
 
 export const resumeAsset = (code: string) => {
-  return benefitClient.post<any, ApiResponse<void>>(`benefit/api/v1/assets/ops/assets/${code}/resume`)
+  return benefitClient.post<any, ApiResponse<void>>(`benefit/api/v1/platform/assets/${code}/resume`)
 }
 
-// ---------- 账户 / 流水(OPS 只读) ----------
+// ---------- 账户 / 流水(平台运营视角,跨 app;app_id 可选收窄) ----------
 
-export const getAssetAccounts = (params: { owner_type: string; owner_id: string; asset_code?: string }) => {
-  return benefitClient.get<any, ApiResponse<AssetAccount[]>>('benefit/api/v1/assets/ops/accounts', { params })
+export const getAssetAccounts = (params: { owner_type: string; owner_id: string; asset_code?: string; app_id?: string }) => {
+  return benefitClient.get<any, ApiResponse<AssetAccount[]>>('benefit/api/v1/platform/assets/accounts', { params })
 }
 
-export const getAssetPostings = (params: { account_ref: string; asset_code: string; page?: number; size?: number }) => {
-  return benefitClient.get<any, ApiResponse<AssetPosting[]>>('benefit/api/v1/assets/ops/postings', { params })
+export const getAssetPostings = (params: { account_ref: string; asset_code: string; app_id?: string; page?: number; size?: number }) => {
+  return benefitClient.get<any, ApiResponse<AssetPosting[]>>('benefit/api/v1/platform/assets/postings', { params })
 }

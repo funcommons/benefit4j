@@ -50,4 +50,33 @@ public class AssetsQueryService {
                 .eq(UbmxPosting::getTxId, txId)
                 .orderByAsc(UbmxPosting::getLegSeq));
     }
+
+    // ---------- 平台运营视角(P3 前端;平台 token app_id=0 不参与过滤,appId 参数可选收窄) ----------
+
+    /** 按主体查名下账户(跨 app 合并;同 owner 在不同 app 各有账户时全部返回) */
+    public List<UbmxAccount> listAccountsByOwner(String ownerType, Long ownerId, String assetCode, Long appId) {
+        return accountMapper.selectList(new LambdaQueryWrapper<UbmxAccount>()
+                .eq(UbmxAccount::getOwnerType, ownerType)
+                .eq(UbmxAccount::getOwnerId, ownerId)
+                .eq(StringUtils.hasText(assetCode), UbmxAccount::getAssetCode, assetCode)
+                .eq(appId != null, UbmxAccount::getAppId, appId)
+                .orderByAsc(UbmxAccount::getAssetCode));
+    }
+
+    /** 按主体查流水分页(先解析名下账户,再合并 src/dst 命中;账户不存在返回空) */
+    public List<UbmxPosting> listPostingsByOwner(String ownerType, Long ownerId, String assetCode,
+            Long appId, int page, int size) {
+        List<Long> accountIds = listAccountsByOwner(ownerType, ownerId, assetCode, appId)
+                .stream().map(UbmxAccount::getId).toList();
+        if (accountIds.isEmpty()) return List.of();
+        int p = Math.max(1, page);
+        int s = Math.min(Math.max(1, size), 100);
+        Page<UbmxPosting> pager = new Page<>(p, s);
+        return postingMapper.selectPage(pager, new LambdaQueryWrapper<UbmxPosting>()
+                .eq(appId != null, UbmxPosting::getAppId, appId)
+                .and(w -> w.in(UbmxPosting::getSrcAccountId, accountIds)
+                        .or().in(UbmxPosting::getDstAccountId, accountIds))
+                .orderByDesc(UbmxPosting::getCreatedAt)
+                .orderByAsc(UbmxPosting::getLegSeq)).getRecords();
+    }
 }

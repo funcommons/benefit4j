@@ -80,6 +80,13 @@ public class Benefit4jExceptionHandler {
         return ApiResponse.fail(403, "权限不足");
     }
 
+    /** 未知路径(无匹配路由,Spring 落静态资源解析抛出) → 404,勿走 500 兜底误导排障 */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> handleNoResource(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ApiResponse.fail(404, "资源不存在: " + ex.getResourcePath());
+    }
+
     /** 兜底: 未捕获异常 → 500 + trace_id */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -41,7 +41,7 @@ public class AssetsControllerIT extends BaseMapperTest {
     private fun.commons.benefit4j.controller.BenefitAssetsRuntimeController runtimeController;
 
     @Autowired
-    private fun.commons.benefit4j.controller.BenefitAssetsOpsController opsController;
+    private fun.commons.benefit4j.controller.BenefitAssetsPlatformController platformController;
 
     @Autowired
     private PostingService postingService;
@@ -190,7 +190,7 @@ public class AssetsControllerIT extends BaseMapperTest {
     }
 
     @Test
-    public void testOpsAssetCrud() {
+    public void testPlatformAssetCrud() {
         String code = "TOP" + uniqueAppid().substring(0, 6).toUpperCase();
         fun.commons.benefit4j.assets.dto.OpsAssetRequest create =
                 new fun.commons.benefit4j.assets.dto.OpsAssetRequest();
@@ -198,14 +198,43 @@ public class AssetsControllerIT extends BaseMapperTest {
         create.setName("运营资产-" + code);
         create.setAssetType("VIRTUAL");
         create.setPrecision(0);
-        ApiResponse<?> created = opsController.postAssets(create);
+        ApiResponse<?> created = platformController.postAssets(create);
         assertThat(created.isSuccess()).isTrue();
 
-        // OPS token 语境: 直接调 service 校验落库
+        // APP token 语境(运营面): 直接调 service 校验落库
         assertThat(registry.getRequired(code).getName()).contains("运营资产");
 
-        ApiResponse<?> list = opsController.getAssets("VIRTUAL", null);
+        ApiResponse<?> list = platformController.getAssets("VIRTUAL", null);
         assertThat(list.isSuccess()).isTrue();
+    }
+
+    /** 平台视角查询: 跨 app 合并(同 owner 两 app 各一账户全返回),app_id 可收窄 */
+    @Test
+    public void testPlatformAccountsPostings_crossApp() {
+        Long uid = uniqueLongId();
+        Long appId2 = createApp().getId();
+        postingService.commitTx(cmd("IT-CTRL-7-A-" + uniqueAppid(), "ISSUE",
+                leg("issue:POINTS", "user:" + uid, "POINTS", "9")));
+        fun.commons.benefit4j.assets.dto.PostingCommand c2 = cmd(
+                "IT-CTRL-7-B-" + uniqueAppid(), "ISSUE",
+                leg("issue:POINTS", "user:" + uid, "POINTS", "5"));
+        c2.setAppId(appId2);
+        postingService.commitTx(c2);
+
+        ApiResponse<?> accounts = platformController.getAccounts("USER", uid, null, null);
+        List<fun.commons.benefit4j.assets.entity.UbmxAccount> accRows =
+                (List<fun.commons.benefit4j.assets.entity.UbmxAccount>) accounts.getData();
+        assertThat(accRows).extracting(fun.commons.benefit4j.assets.entity.UbmxAccount::getAppId)
+                .contains(appId, appId2);   // 跨 app 合并
+
+        ApiResponse<?> narrowed = platformController.getAccounts("USER", uid, "POINTS", appId2);
+        assertThat(((List<?>) narrowed.getData())).hasSize(1);   // app_id 收窄
+
+        ApiResponse<?> postings = platformController.getPostings("user:" + uid, "POINTS", null, 1, 20);
+        List<fun.commons.benefit4j.assets.entity.UbmxPosting> postRows =
+                (List<fun.commons.benefit4j.assets.entity.UbmxPosting>) postings.getData();
+        assertThat(postRows).extracting(p -> p.getAmount().stripTrailingZeros().toPlainString())
+                .contains("9", "5");   // 两 app 流水都在
     }
 
     @Test

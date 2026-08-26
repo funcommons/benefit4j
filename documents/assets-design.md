@@ -429,15 +429,21 @@ RetryTemplate 配置:
 > URL 沿用 `/assets/*` 命名空间,**runtime 域强制 `@RequiresSignature`**(三方对接),`/ops/*` 用 OPS token。
 > 所有写操作走 framework4j-idempotency 路径(`Idempotency-Key` 请求头 + 表内 `uk(ext_order_id)` 双层幂等)。
 
-### 4.1 资产定义管理(运营端,OPS)
+### 4.1 资产定义管理(运营端)
+
+> 实现拆两面(登录端点只发 APP 型 token,OPS 型由运维签发):
+> **platform 运营面** `/benefit/api/v1/platform/assets/**`(APP 型,平台登录/运营页用,P3 前端);
+> **ops 运维通道** `/benefit/api/v1/assets/ops/**`(OPS 型,对账/幂等释放/授信调额,§4.7)。
 
 | API | 语义 |
 | | |
-| `POST /assets/assets` | 新增资产定义(运营后台) |
-| `GET /assets/assets` | 列表(支持 `asset_type / status` 过滤) |
-| `GET /assets/assets/{code}` | 详情 |
-| `PATCH /assets/assets/{code}` | 改 name/precision/can_*/expire_policy |
-| `POST /assets/assets/{code}/suspend` | 停用(已有账户不冻结,新充值/发放禁止) |
+| `POST /platform/assets` | 新增资产定义(运营后台) |
+| `GET /platform/assets` | 列表(支持 `asset_type / status` 过滤) |
+| `GET /platform/assets/{code}` | 详情 |
+| `PATCH /platform/assets/{code}` | 改 name/precision/can_*/expire_policy |
+| `POST /platform/assets/{code}/suspend` \| `/resume` | 停用/启用(已有账户不冻结,新充值/发放禁止) |
+| `GET /platform/assets/accounts` | 运营查主体账户(**平台视角跨 app 合并**,`app_id` 参数可选收窄) |
+| `GET /platform/assets/postings` | 运营查流水(account_ref 如 `user:123`,跨 app 合并) |
 
 ### 4.2 账户查询(tenant/平台,APP token)
 

@@ -21,10 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * assets 域 SMOKE(真实进程,非 IT 上下文): 前置 = 本地已起 benefit4j-app(9200)。
  * 未启动时自动 skip(assumeTrue),不进常规回归。
  *
- * 覆盖此前无法验证的「带 token 正例链」:
- *   OPS token → 资产列表/新建/停启用/流水查询(200);
- *   APP token → runtime 资金 API 无签名 → 被签名拦截(非 200,InMemorySecretProvider
- *   无注册密钥=全拒模式,等待接入方配置前的安全默认)。
+ * 覆盖「平台登录 → 运营页」真实链(P1 修复回归): APP token 打 platform/assets 正例链
+ * (列表含种子/新建/停启用/流水查询);OPS token 打运维通道(reconcile/run);
+ * APP token 无签名打 runtime 资金 API → 被签名拦截(InMemorySecretProvider 无注册密钥=全拒模式,
+ * 等接入方配置前的安全默认);无 token → 401。
  */
 @Tag("smoke")
 @SpringBootTest(classes = Benefit4jIntegrationTest.TestApplication.class,
@@ -58,12 +58,12 @@ public class AssetsSmokeIT extends BaseMapperTest {
 
     private static void HTTP_PROBE() throws Exception {
         HttpClient.newBuilder().build().send(
-                HttpRequest.newBuilder(URI.create(BASE + "/benefit/api/v1/assets/ops/assets")).GET().build(),
+                HttpRequest.newBuilder(URI.create(BASE + "/benefit/api/v1/platform/assets")).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
     }
 
     private void ensureTokens() {
-        if (opsToken != null) return;
+        if (appToken != null) return;
         if (appId == null) appId = createApp().getId();
         // it 模块 yml policy key=appid,app 模块 key=app_id(仓内既有不一致),双键兼容两侧
         Map<String, Object> claims = Map.of("app_id", String.valueOf(appId), "appid", String.valueOf(appId));
@@ -85,31 +85,45 @@ public class AssetsSmokeIT extends BaseMapperTest {
     }
 
     @Test
-    public void smoke_opsPositiveChain() throws Exception {
+    public void smoke_platformPositiveChain() throws Exception {
         ensureTokens();
 
-        // ① 资产列表: 种子可见
-        HttpResponse<String> list = call("GET", "/benefit/api/v1/assets/ops/assets", opsToken, null);
+        // ① 资产列表(平台登录链,APP token): 种子可见
+        HttpResponse<String> list = call("GET", "/benefit/api/v1/platform/assets", appToken, null);
         assertThat(list.statusCode()).isEqualTo(200);
         assertThat(list.body()).contains("POINTS").contains("GOLD").contains("COMPUTE");
 
         // ② 新建资产 → 200
         String code = "SMOKE" + uniqueAppid().substring(0, 6).toUpperCase();
-        HttpResponse<String> create = call("POST", "/benefit/api/v1/assets/ops/assets", opsToken,
+        HttpResponse<String> create = call("POST", "/benefit/api/v1/platform/assets", appToken,
                 "{\"code\":\"" + code + "\",\"name\":\"冒烟-" + code + "\",\"asset_type\":\"VIRTUAL\",\"precision\":2}");
         assertThat(create.statusCode()).isEqualTo(200);
         assertThat(create.body()).contains(code);
 
         // ③ 停用 → 启用 → 200
-        assertThat(call("POST", "/benefit/api/v1/assets/ops/assets/" + code + "/suspend", opsToken, null).statusCode())
+        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/suspend", appToken, null).statusCode())
                 .isEqualTo(200);
-        assertThat(call("POST", "/benefit/api/v1/assets/ops/assets/" + code + "/resume", opsToken, null).statusCode())
+        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/resume", appToken, null).statusCode())
                 .isEqualTo(200);
 
-        // ④ 流水查询(OPS 只读,账户不存在返回空数组)
+        // ④ 流水查询(平台视角,账户不存在返回空数组)
         HttpResponse<String> postings = call("GET",
-                "/benefit/api/v1/assets/ops/postings?account_ref=user:999999&asset_code=POINTS", opsToken, null);
+                "/benefit/api/v1/platform/assets/postings?account_ref=user:999999&asset_code=POINTS", appToken, null);
         assertThat(postings.statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    public void smoke_opsChannel_reconcile() throws Exception {
+        ensureTokens();
+        // OPS token → 运维通道对账(本 appId 无流量,恒等式应成立)
+        HttpResponse<String> resp = call("POST", "/benefit/api/v1/assets/ops/reconcile/run", opsToken,
+                "{\"appId\":" + appId + ",\"assetCode\":\"POINTS\"}");
+        assertThat(resp.statusCode()).isEqualTo(200);
+
+        // 反向验证 token 型别隔离: OPS 型 token 打 runtime(要求 APP 型)→ 拒绝
+        HttpResponse<String> wrongType = call("POST", "/benefit/api/v1/assets/runtime/issue", opsToken,
+                "{\"extOrderId\":\"SMOKE-OPS-1\",\"legs\":[{\"src\":\"issue:POINTS\",\"dst\":\"user:1\",\"assetCode\":\"POINTS\",\"amount\":\"1\"}]}");
+        assertThat(wrongType.statusCode()).isNotEqualTo(200);
     }
 
     @Test
@@ -125,7 +139,7 @@ public class AssetsSmokeIT extends BaseMapperTest {
     @Test
     public void smoke_unauthorizedWithoutToken() throws Exception {
         HttpResponse<String> resp = HTTP.send(
-                HttpRequest.newBuilder(URI.create(BASE + "/benefit/api/v1/assets/ops/assets")).GET().build(),
+                HttpRequest.newBuilder(URI.create(BASE + "/benefit/api/v1/platform/assets")).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
         assertThat(resp.statusCode()).isEqualTo(401);
     }
