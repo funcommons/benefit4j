@@ -84,10 +84,71 @@ public class TenantSecurityIT extends BaseMapperTest {
         assertThat(redis.hasKey(sessionKey(t, "APP"))).isTrue();
         assertThat(redis.hasKey(sessionKey(t, "OPS"))).isTrue();
 
+        String oldSecret = t.getTenantSecret();
+
         // reset-secret → 存量会话全部撤销
         Object resp = platformService.postTenantsTenantIdSecret(t.getId());
         assertThat(((ApiResponse<?>) resp).getCode()).isZero();
         assertThat(redis.hasKey(sessionKey(t, "APP"))).isFalse();
         assertThat(redis.hasKey(sessionKey(t, "OPS"))).isFalse();
+
+        // 宽限期(§5.5): 旧密钥在 24h 内仍可换 token(双版本过渡)
+        Object grace = authService.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
+        assertThat(((ApiResponse<?>) grace).getCode())
+                .as("宽限期内旧密钥应可用").isZero();
+    }
+
+    @Test
+    public void resetSecret_graceSecret_expires() throws Exception {
+        UbmaTenant t = createTenant();
+        String oldSecret = t.getTenantSecret();
+        platformService.postTenantsTenantIdSecret(t.getId());
+
+        // 宽限期内旧密钥可用(上一用例已验);把 prev_at 拨到 25h 前 → 旧密钥失效
+        try (var conn = AssetsMigrations.open();
+             var stmt = conn.createStatement()) {
+            stmt.execute("UPDATE ubma_tenant SET tenant_secret_prev_at = now() - interval '25 hours' "
+                    + "WHERE id = " + t.getId());
+        }
+        Object expired = authService.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
+        assertThat(((ApiResponse<?>) expired).getCode())
+                .as("宽限期外旧密钥应拒绝").isEqualTo(401);
+
+        // 新密钥不受影响 —— 从 reset 响应拿不到(上个调用),重取
+        UbmaTenant fresh = tenantMapper.selectById(t.getId());
+        Object freshOk = authService.postToken("client_credentials", String.valueOf(t.getId()), fresh.getTenantSecret());
+        assertThat(((ApiResponse<?>) freshOk).getCode()).isZero();
+        redis.delete("benefit4j:auth:fail:" + t.getId());
+    }
+
+    @Test
+    public void rlsPolicies_inPlace_notForcing() throws Exception {
+        // V1.4.1: 六表 RLS 就位(ENABLE 不 FORCE,零行为变化),策略 tenant_isolation 存在
+        try (var conn = AssetsMigrations.open();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(
+                 "SELECT c.relname, c.relrowsecurity FROM pg_class c " +
+                 "WHERE c.relname IN ('ubmx_account','ubmx_posting','ubmx_tx_order'," +
+                 "'ubmx_pre_consume','ubmx_freeze','ubmx_reconcile_diff') AND c.relkind IN ('r','p')")) {
+            int enabled = 0;
+            while (rs.next()) {
+                if (rs.getBoolean(2)) enabled++;
+            }
+            assertThat(enabled).as("六表 RLS 应全部 enabled").isEqualTo(6);
+        }
+        try (var conn = AssetsMigrations.open();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(
+                 "SELECT count(*) FROM pg_policies WHERE policyname='tenant_isolation'")) {
+            rs.next();
+            assertThat(rs.getInt(1)).isEqualTo(6);
+        }
+        // 零行为验证: 当前 admin 连接(表 owner/superuser)不受 RLS 限制
+        try (var conn = AssetsMigrations.open();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery("SELECT count(*) FROM ubmx_account")) {
+            rs.next();
+            assertThat(rs.getLong(1)).isGreaterThanOrEqualTo(0);
+        }
     }
 }

@@ -142,6 +142,9 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         }
 
         String newSecret = UUID.randomUUID().toString().replace("-", "");
+        // 旧密钥进宽限期列(§5.5 双版本过渡,默认 24h 内两把皆可换 token)
+        app.setTenantSecretPrev(app.getTenantSecret());
+        app.setTenantSecretPrevAt(OffsetDateTime.now());
         // 走 updateById 让 LazyEncryptedFieldTypeHandler (framework4j) 自动加密 tenant_secret;
         // ext 字段标了 jdbcType=JdbcType.OTHER 修复 JSONB update cast, 全量 updateById 不再报
         // "column ext is of type jsonb but expression is of type varchar"

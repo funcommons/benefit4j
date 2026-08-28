@@ -37,6 +37,10 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
     @Value("${benefit4j.security.platform.client-secret:}")
     private String platformClientSecret;
 
+    /** 密钥轮换宽限期(§5.5): reset 后旧密钥仍可换 token 的时长(小时) */
+    @Value("${benefit4j.security.secret-grace-hours:24}")
+    private long secretGraceHours;
+
     private static final String TOKEN_TYPE = "APP";
 
     /** 换 token 防爆破(§8 #7): 连续失败 5 次锁 15min,成功清零 */
@@ -120,8 +124,19 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
             return syntheticPlatformTenant();
         }
         UbmaTenant app = findAppByClientId(clientId);
-        if (app == null || !clientSecret.equals(app.getTenantSecret())) return null;
-        return app;
+        if (app == null) return null;
+        if (clientSecret.equals(app.getTenantSecret())) return app;          // 主密钥
+        if (matchesGraceSecret(app, clientSecret)) return app;               // 宽限期内旧密钥(§5.5)
+        return null;
+    }
+
+    /** 轮换宽限期双版本比对: 旧密钥命中且未过宽限期 → 视同认证成功(懒校验,无需清理任务) */
+    private boolean matchesGraceSecret(UbmaTenant app, String clientSecret) {
+        String prev = app.getTenantSecretPrev();
+        if (prev == null || prev.isEmpty() || !clientSecret.equals(prev)) return false;
+        var prevAt = app.getTenantSecretPrevAt();
+        if (prevAt == null) return false;
+        return prevAt.isAfter(java.time.OffsetDateTime.now().minusHours(secretGraceHours));
     }
 
     private UbmaTenant syntheticPlatformTenant() {

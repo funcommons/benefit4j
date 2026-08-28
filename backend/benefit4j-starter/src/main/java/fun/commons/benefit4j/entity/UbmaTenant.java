@@ -41,6 +41,18 @@ public class UbmaTenant {
     private String tenantSecret;
 
     /**
+     * 轮换宽限期内的旧密钥(§5.5 双版本过渡): reset 时旧 secret 挪入此列,
+     * 宽限期内两把皆可换 token; 过期后旧密钥自然失效(懒校验,无需清理任务)。
+     * 同款加密存储;永不对外返回。
+     */
+    @TableField(typeHandler = LazyEncryptedFieldTypeHandler.class)
+    private String tenantSecretPrev;
+
+    /** 旧密钥存入时间(宽限期起点) */
+    @TableField("tenant_secret_prev_at")
+    private java.time.OffsetDateTime tenantSecretPrevAt;
+
+    /**
      * 租户名称
      */
     private String name;
