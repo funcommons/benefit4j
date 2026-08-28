@@ -9,15 +9,19 @@ import fun.commons.framework4j.accesstoken.core.AccessTokenGenerator;
 import fun.commons.framework4j.id.util.IdObfuscator;
 import fun.commons.framework4j.web.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @ConditionalOnClass(AccessTokenGenerator.class)
 public class DefaultBenefitAuthService implements BenefitAuthService {
@@ -25,6 +29,7 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
     private final UbmaTenantMapper applicationMapper;
     private final ObjectProvider<AccessTokenGenerator> tokenGeneratorProvider;
     private final AccessTokenProperties tokenProperties;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${benefit4j.security.platform.client-id:PLATFORM}")
     private String platformClientId;
@@ -33,6 +38,11 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
     private String platformClientSecret;
 
     private static final String TOKEN_TYPE = "APP";
+
+    /** 换 token 防爆破(§8 #7): 连续失败 5 次锁 15min,成功清零 */
+    static final String FAIL_KEY_PREFIX = "benefit4j:auth:fail:";
+    static final int MAX_FAIL = 5;
+    static final Duration LOCK_TTL = Duration.ofMinutes(15);
 
     @Override
     public Object postToken(String grantType, String clientId, String clientSecret) {
@@ -43,10 +53,18 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
             return ApiResponse.fail(400, "client_id和client_secret不能为空");
         }
 
+        String lockKey = FAIL_KEY_PREFIX + clientId;
+        if (isLocked(lockKey)) {
+            log.warn("[Auth] 换 token 已锁定(防爆破): clientId={}", clientId);
+            return ApiResponse.fail(429, "认证失败次数过多，已锁定 15 分钟");
+        }
+
         UbmaTenant app = resolveApp(clientId, clientSecret);
         if (app == null) {
+            recordFailure(lockKey, clientId);
             return ApiResponse.fail(401, "client_id或client_secret无效");
         }
+        redisTemplate.delete(lockKey);   // 成功即清零
 
         Map<String, Object> claims = new LinkedHashMap<>();
         claims.put("tenant_id", app.getId());
@@ -64,6 +82,26 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
 
     private boolean authenticate(String clientId, String clientSecret) {
         return resolveApp(clientId, clientSecret) != null;
+    }
+
+    // ---------- 防爆破(§8 #7) ----------
+
+    private boolean isLocked(String lockKey) {
+        String fails = redisTemplate.opsForValue().get(lockKey);
+        if (fails == null) return false;
+        try {
+            return Long.parseLong(fails) >= MAX_FAIL;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private void recordFailure(String lockKey, String clientId) {
+        Long n = redisTemplate.opsForValue().increment(lockKey);
+        if (n != null && n == 1L) {
+            redisTemplate.expire(lockKey, LOCK_TTL);   // 固定窗口: 首次失败起算 15min
+        }
+        log.warn("[Auth] 换 token 失败: clientId={}, 窗口内第 {} 次(达 {} 次锁定)", clientId, n, MAX_FAIL);
     }
 
     /**

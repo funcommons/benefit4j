@@ -6,10 +6,13 @@ import fun.commons.benefit4j.dto.*;
 import fun.commons.benefit4j.entity.*;
 import fun.commons.benefit4j.mapper.*;
 import fun.commons.benefit4j.service.BenefitPlatformService;
+import fun.commons.framework4j.accesstoken.config.AccessTokenProperties;
 import fun.commons.framework4j.audit.annotation.Auditable;
 import fun.commons.framework4j.id.util.IdObfuscator;
 import fun.commons.framework4j.web.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,11 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     private final UbmaSubscribeMapper subscribeMapper;
     private final UbmaSubscribeItemMapper subscribeItemMapper;
     private final UbmaConsumeMapper consumeMapper;
+    private final AccessTokenProperties accessTokenProperties;
+    private final StringRedisTemplate redisTemplate;
+
+    @Value("${spring.application.name:benefit4j-backend}")
+    private String appName;
 
     @Override
     @Transactional
@@ -141,11 +149,36 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         app.setUpdatedAt(OffsetDateTime.now());
         applicationMapper.updateById(app);
 
+        revokeTenantSessions(tenantId);   // §5.5: 重置即撤销该租户全部存量会话
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", IdObfuscator.toOpenId(app.getId()));
         result.put("name", app.getName());
         result.put("tenant_secret", newSecret);
         return ApiResponse.success(result);
+    }
+
+    /**
+     * 按租户撤销全部存量会话(§5.5 密钥生命周期): framework4j 会话 key 为
+     * {appName}:accesstoken:{type}:{calculateKeyHash(tenant_id, hashSalt)},
+     * 删除 APP/OPS 两型的元数据 key 与限次计数 key —— 持有旧 token 的会话立即失效。
+     */
+    private void revokeTenantSessions(Long tenantId) {
+        try {
+            String hash = fun.commons.framework4j.accesstoken.util.TokenUtils.calculateKeyHash(
+                    String.valueOf(tenantId), accessTokenProperties.getHashSalt());
+            for (String type : List.of("APP", "OPS")) {
+                String key = fun.commons.framework4j.accesstoken.core.TokenKeyBuilder
+                        .accessMetadata(appName, type, hash);
+                redisTemplate.delete(key);
+                redisTemplate.delete(fun.commons.framework4j.accesstoken.core.TokenKeyBuilder
+                        .accessUsageStats(key));
+            }
+        } catch (Exception e) {
+            // 撤销失败不阻断 reset 主流程(新密钥已生效),但必须留痕排查
+            org.slf4j.LoggerFactory.getLogger(DefaultBenefitPlatformService.class)
+                    .error("[Security] reset-secret 后撤销租户会话失败: tenantId={}", tenantId, e);
+        }
     }
 
     @Override

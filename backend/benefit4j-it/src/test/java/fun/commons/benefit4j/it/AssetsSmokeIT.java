@@ -42,6 +42,7 @@ public class AssetsSmokeIT extends BaseMapperTest {
     private Long tenantId;
     private String opsToken;
     private String appToken;
+    private String platformToken;
 
     @BeforeAll
     static void requireApp() throws Exception {
@@ -68,6 +69,8 @@ public class AssetsSmokeIT extends BaseMapperTest {
         Map<String, Object> claims = Map.of("tenant_id", String.valueOf(tenantId));
         opsToken = tokenGenerator.generateToken("OPS", claims);
         appToken = tokenGenerator.generateToken("APP", claims);
+        // 平台身份 = 合成租户 tenant_id=0(§5.3)—— 平台域唯一合法的租户 token 形态
+        platformToken = tokenGenerator.generateToken("APP", Map.of("tenant_id", "0"));
     }
 
     private HttpResponse<String> call(String method, String path, String token, String body) throws Exception {
@@ -88,27 +91,33 @@ public class AssetsSmokeIT extends BaseMapperTest {
         ensureTokens();
 
         // ① 资产列表(平台登录链,APP token): 种子可见
-        HttpResponse<String> list = call("GET", "/benefit/api/v1/platform/assets", appToken, null);
+        HttpResponse<String> list = call("GET", "/benefit/api/v1/platform/assets", platformToken, null);
         assertThat(list.statusCode()).isEqualTo(200);
         assertThat(list.body()).contains("POINTS").contains("GOLD").contains("COMPUTE");
 
         // ② 新建资产 → 200
         String code = "SMOKE" + uniqueTenantid().substring(0, 6).toUpperCase();
-        HttpResponse<String> create = call("POST", "/benefit/api/v1/platform/assets", appToken,
+        HttpResponse<String> create = call("POST", "/benefit/api/v1/platform/assets", platformToken,
                 "{\"code\":\"" + code + "\",\"name\":\"冒烟-" + code + "\",\"asset_type\":\"VIRTUAL\",\"precision\":2}");
         assertThat(create.statusCode()).isEqualTo(200);
         assertThat(create.body()).contains(code);
 
         // ③ 停用 → 启用 → 200
-        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/suspend", appToken, null).statusCode())
+        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/suspend", platformToken, null).statusCode())
                 .isEqualTo(200);
-        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/resume", appToken, null).statusCode())
+        assertThat(call("POST", "/benefit/api/v1/platform/assets/" + code + "/resume", platformToken, null).statusCode())
                 .isEqualTo(200);
 
         // ④ 流水查询(平台视角,账户不存在返回空数组)
         HttpResponse<String> postings = call("GET",
-                "/benefit/api/v1/platform/assets/postings?account_ref=user:999999&asset_code=POINTS", appToken, null);
+                "/benefit/api/v1/platform/assets/postings?account_ref=user:999999&asset_code=POINTS", platformToken, null);
         assertThat(postings.statusCode()).isEqualTo(200);
+
+        // ⑤ 租户 token 打平台域 → 403(§5.3 强校验,P0 越权缺口回归)
+        HttpResponse<String> forbidden = call("GET", "/benefit/api/v1/platform/assets", appToken, null);
+        assertThat(forbidden.statusCode()).isEqualTo(403);
+        HttpResponse<String> forbidden2 = call("GET", "/benefit/api/v1/platform/tenants", appToken, null);
+        assertThat(forbidden2.statusCode()).isEqualTo(403);
     }
 
     @Test

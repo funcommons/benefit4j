@@ -10,6 +10,7 @@ import fun.commons.framework4j.web.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,12 @@ public class BenefitAssetsPlatformController {
     private static final Set<String> OWNER_TYPES = Set.of("USER", "TENANT", "MERCHANT", "PLATFORM", "EXTERNAL");
 
     private final AssetRegistryService registry;
+
+    /** 平台域强校验(§5.3 方案 B): 仅平台身份(tenant_id==0)可达,租户 token 一律 403 */
+    @ModelAttribute
+    void requirePlatformIdentity() {
+        fun.commons.benefit4j.security.PlatformIdentityGuard.requirePlatform();
+    }
     private final AssetsQueryService queryService;
 
     @PostMapping
