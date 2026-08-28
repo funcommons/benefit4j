@@ -1,6 +1,6 @@
 # framework4j-tenant 模块设计方案
 
-> **版本** v1.0 · **更新** 2026-08-28 · **状态** 待评审 · **上游文档** [中间件中台租户设计 v2.1](./中间件中台租户设计.md) · **参考实现** benefit4j(6+1 项安全修复已验证)
+> **版本** v1.1 · **更新** 2026-08-28 · **状态** 定稿 · v1.1:D-1 改定 B 方案(映射项目现有表,表名={项目简码前缀}tenant,遵守「所有表以项目简码_开头」规范;实体子类 SPI + DDL 初始化器替代框架自有表,benefit4j 零数据迁移) · **上游文档** [中间件中台租户设计 v2.1](./中间件中台租户设计.md) · **参考实现** benefit4j(6+1 项安全修复已验证)
 >
 > **目标** 把租户设计的「契约层」代码化:下一个中间件引入一个依赖 + 少量配置即合规,安全横切面单点维护、修一次全体受益。
 
@@ -23,14 +23,27 @@
 
 ## 2. 关键设计决策
 
-### D-1 租户表:框架自有表 `f4j_tenant`(非可配表名)
+### D-1 租户表:映射项目现有表,表名 = `{项目简码前缀}tenant`(B 方案,v1.1 定稿)
 
-| 方案 | 判定 |
+**规范前提**:各项目所有表以项目简码_ 开头(benefit4j: `ubm{a|p|x}_*`)——租户表也不例外,
+框架**不引入**自有命名空间(不建 `f4j_tenant`),映射到项目现有表:
+
+```yaml
+framework4j:
+  tenant:
+    table-prefix: ubma_        # 项目简码域前缀 → 租户表 = ubma_tenant
+```
+
+| 手段 | 判定 |
 |---|---|
-| **A. 框架自有表 `f4j_tenant`,DDL 由模块自带迁移统一管理** ✅ | 表结构 SSOT 在框架,杜绝各项目 DDL 漂移(这正是 10 年契约层的代码化);下游一次数据迁移即可 |
-| B. 表名可配(DynamicTableName 映射到各项目现有表) | 零迁移但结构漂移不可控,框架升级被各项目魔改拖累 |
+| **实体子类 SPI(2 文件/项目)** ✅ | 项目写 `@TableName("ubma_tenant") class BenefitTenant extends TenantEntity {}` + `interface BenefitTenantMapper extends BaseMapper<BenefitTenant> {}` 并注册为 `TenantSchema` —— 显式、零魔法、零 SQL 解析开销、不动全局 table-prefix |
+| DynamicTableNameInnerInterceptor | 零项目代码,但全局 SQL 解析开销 + 隐式替换魔法(误伤同名逻辑表风险),弃 |
+| 全局 mybatis-plus table-prefix | 会拼接在项目全部显式 @TableName 前,破坏现有实体,禁用 |
 
-`f4j_tenant` 即文档 §3.1 的 `xmp_tenants` 原样(列名/约束一字不改,契约层冻结);`tenant_id` 语义 = `f4j_tenant.id`。
+**结构契约不因 B 方案放松**:`TenantEntity` 基类字段(= 文档 §3.1 列,契约层冻结)由框架定义;
+**DDL 由框架保证**——启动初始化器按配置表名执行幂等 DDL(CREATE IF NOT EXISTS + 缺列补列,
+`ddl-mode: AUTO`),Flyway 项目可切 `PROVIDED`(框架输出 SQL 模板,项目迁移工具自行管理);
+**tck 结构断言参数化表名**,列漂移照样被验收抓住。
 
 ### D-2 三域守卫:注解 + 拦截器(替代各项目手工 @ModelAttribute)
 
@@ -58,7 +71,7 @@ public class XxxRuntimeController { ... }
 
 | # | 组件 | 内容 | benefit4j 对应(迁移源) |
 |---|---|---|---|
-| 1 | `f4j_tenant` 表 + `Tenant`/`TenantMapper` | 自带迁移(幂等);四类配置 JSONB;secret AES-GCM(LazyEncryptedFieldTypeHandler) | `ubma_tenant` + `UbmaTenantMapper`(数据迁移) |
+| 1 | `TenantEntity` 基类 + `TenantSchema` SPI + DDL 初始化器 | 表名={简码前缀}tenant(项目现有表,零数据迁移);四类配置 JSONB;secret AES-GCM;DDL 幂等(AUTO/PROVIDED) | `ubma_tenant` + `UbmaTenantMapper`(直接映射,加两个适配文件) |
 | 2 | `@PlatformDomain` / `@TenantDomain` + `DomainGuardInterceptor` | 双面守卫(认 0 / 拒 0),401/403 映射 | `PlatformIdentityGuard` / `TenantIdentityGuard` + 手工 @ModelAttribute |
 | 3 | `TenantAuthTemplate` + 内置 `TenantAuthEndpoint` | client_credentials、防爆破(5 次/15min,429)、平台合成租户(id=0)、宽限期双版本比对 | `DefaultBenefitAuthService` |
 | 4 | `TenantSecretService` | reset(旧钥入 prev + 撤销全部会话)、明文只显一次、脱敏 | `DefaultBenefitPlatformService#postTenantsTenantIdSecret` + revoke |
@@ -72,6 +85,8 @@ public class XxxRuntimeController { ... }
 framework4j:
   tenant:
     enabled: true
+    table-prefix: ubma_             # 租户表 = {table-prefix}tenant(项目简码规范)
+    ddl-mode: AUTO                  # AUTO 启动幂等建表 / PROVIDED 输出 SQL 模板由项目迁移工具管理
     auth:
       enabled: true                  # 内置认证端点
       path: /api/v1/auth/token
@@ -107,7 +122,7 @@ framework4j:
 | 阶段 | 动作 | 风险 |
 |---|---|---|
 | P1 | framework4j v1.5.0 发布模块(不含 benefit4j 改动) | 零 |
-| P2 | benefit4j 升依赖,删自有 guard/auth/secret 实现,controller 换 `@PlatformDomain`/`@TenantDomain`;`ubma_tenant → f4j_tenant` 数据迁移(V1.5.0:INSERT SELECT + 老表重命名归档);`token-type: APP` 兼容存量 | 中:全量 IT+smoke 回归;数据迁移可逆(老表保留) |
+| P2 | benefit4j 升依赖,删自有 guard/auth/secret 实现,controller 换 `@PlatformDomain`/`@TenantDomain`;写 `BenefitTenant extends TenantEntity` + Mapper 两文件注册 SPI(`table-prefix: ubma_` 直接映射现有表,**零数据迁移**);`token-type: APP` 兼容存量 | 低:全量 IT+smoke 回归;无数据迁移 |
 | P3 | 接入 tenant-tck;前端无感(token 透传) | 低 |
 | P4 | 观察一个版本后删兼容开关(token-type 切 TENANT,存量 token 失效窗口公告) | 低 |
 
@@ -129,7 +144,7 @@ framework4j:
 | 风险 | 对策 |
 |---|---|
 | 双仓库联动(benefit4j 依赖未发布版本) | 严格按 P1 先发布后接入;本地 install 联调时注意 `-am` 与本地库旧 jar 陷阱(已记入记忆) |
-| f4j_tenant 数据迁移丢配置 | 老表重命名归档不删,迁移脚本幂等可重放,回滚 = 改回表名 |
+| B 方案列结构漂移(项目魔改租户表) | TenantEntity 基类 + DDL 初始化器(缺列补列)+ tck 结构断言(参数化表名)三重守护 |
 | 各项目存量 token 型别不一 | `token-type` 兼容开关 + P4 观察期切换 |
 | 模块演进与文档契约层脱钩 | 模块 CHANGELOG 引用文档条款号(§x.y);tck 断言与 §10 checklist 一一对应 |
 
