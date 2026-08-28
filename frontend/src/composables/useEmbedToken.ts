@@ -2,8 +2,8 @@
  * useEmbedToken - 嵌入模式认证 (postMessage 握手 + URL token 兼容)。
  *
  * 安全等级:
- *  - 推荐级 (postMessage): token 不进 URL, 不写 localStorage, 全程内存。
- *  - 基础级 (URL token):   URL 带 ?access_token=..., 写 localStorage 供 SPA 跳转复用。
+ *  - 推荐级 (postMessage): token 不进 URL, 不写 storage, 全程内存。
+ *  - 基础级 (URL token):   URL 带 ?access_token=..., 写 sessionStorage 供 SPA 跳转复用(关 tab 即清)。
  *
  * 用法 (PageLayout.vue):
  *   const { status } = useEmbedToken()

@@ -3,12 +3,12 @@ import { ref, computed } from 'vue'
 import { login as loginApi } from '@/api/benefitAuth'
 
 export const useBenefitAuthStore = defineStore('benefitAuth', () => {
-  const token = ref<string | null>(localStorage.getItem('benefit4j:access_token'))
-  const tenantId = ref<string | null>(localStorage.getItem('benefit4j:tenant_id'))
-  const appSecret = ref<string | null>(localStorage.getItem('benefit4j:app_secret'))
+  const token = ref<string | null>(sessionStorage.getItem('benefit4j:access_token'))
+  const tenantId = ref<string | null>(sessionStorage.getItem('benefit4j:tenant_id'))
+  const appSecret = ref<string | null>(sessionStorage.getItem('benefit4j:app_secret'))
   const expiresAt = ref<number | null>(
-    localStorage.getItem('benefit4j:expires_at')
-      ? Number(localStorage.getItem('benefit4j:expires_at'))
+    sessionStorage.getItem('benefit4j:expires_at')
+      ? Number(sessionStorage.getItem('benefit4j:expires_at'))
       : null
   )
 
@@ -30,20 +30,20 @@ export const useBenefitAuthStore = defineStore('benefitAuth', () => {
   function setToken(accessToken: string, expiresIn?: number, persist = true) {
     token.value = accessToken
     if (persist) {
-      localStorage.setItem('benefit4j:access_token', accessToken)
+      sessionStorage.setItem('benefit4j:access_token', accessToken)
     }
     if (expiresIn) {
       const at = Date.now() + expiresIn * 1000
       expiresAt.value = at
       if (persist) {
-        localStorage.setItem('benefit4j:expires_at', String(at))
+        sessionStorage.setItem('benefit4j:expires_at', String(at))
       }
     }
   }
 
   function setAppId(id: string) {
     tenantId.value = id
-    localStorage.setItem('benefit4j:tenant_id', id)
+    sessionStorage.setItem('benefit4j:tenant_id', id)
   }
 
   async function login(clientId: string, clientSecret: string) {
@@ -52,7 +52,7 @@ export const useBenefitAuthStore = defineStore('benefitAuth', () => {
     setAppId(clientId)
     // runtime 域签名需 app_secret (= client_credentials 的 client_secret), 与 token 同生命周期管理
     appSecret.value = clientSecret
-    localStorage.setItem('benefit4j:app_secret', clientSecret)
+    sessionStorage.setItem('benefit4j:app_secret', clientSecret)
   }
 
   function logout() {
@@ -60,10 +60,10 @@ export const useBenefitAuthStore = defineStore('benefitAuth', () => {
     tenantId.value = null
     appSecret.value = null
     expiresAt.value = null
-    localStorage.removeItem('benefit4j:access_token')
-    localStorage.removeItem('benefit4j:tenant_id')
-    localStorage.removeItem('benefit4j:app_secret')
-    localStorage.removeItem('benefit4j:expires_at')
+    sessionStorage.removeItem('benefit4j:access_token')
+    sessionStorage.removeItem('benefit4j:tenant_id')
+    sessionStorage.removeItem('benefit4j:app_secret')
+    sessionStorage.removeItem('benefit4j:expires_at')
   }
 
   return {

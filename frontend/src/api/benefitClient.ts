@@ -9,13 +9,13 @@ export type { ApiResponse } from './types'
 import type { ApiResponse } from './types'
 
 /**
- * Token 提供者 — 默认从 localStorage 读 (基础级 / 登录页模式)。
+ * Token 提供者 — 默认从 sessionStorage 读 (基础级 / 登录页模式)。
  * 嵌入推荐级 (postMessage) 模式下 token 只在内存, 需通过
  * setBenefitTokenProvider(() => useBenefitAuthStore().token) 注入 store 读取。
  *
  * 与 request.ts 的 setUserStoreGetter 同一模式, 避免 benefitClient ↔ store 循环依赖。
  */
-let tokenProvider: () => string | null = () => localStorage.getItem('benefit4j:access_token')
+let tokenProvider: () => string | null = () => sessionStorage.getItem('benefit4j:access_token')
 
 export function setBenefitTokenProvider(provider: () => string | null) {
   tokenProvider = provider
@@ -50,8 +50,8 @@ benefitClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // runtime 域强制 HMAC-SHA256 签名 (与后端 @RequiresSignature 对齐)
   const url = config.url || ''
   if (isRuntimeUrl(url)) {
-    const secret = localStorage.getItem('benefit4j:app_secret')
-    const accessKey = localStorage.getItem('benefit4j:tenant_id')
+    const secret = sessionStorage.getItem('benefit4j:app_secret')
+    const accessKey = sessionStorage.getItem('benefit4j:tenant_id')
     if (secret && accessKey) {
       const sig = buildSignatureHeaders(config.method || 'get', url, secret, accessKey, config.data)
       config.headers.set('X-Access-Key', sig['X-Access-Key'])
@@ -105,10 +105,10 @@ function handleAuthFailure(code: number): void {
   })
 
   // 清登录态
-  localStorage.removeItem('benefit4j:access_token')
-  localStorage.removeItem('benefit4j:expires_at')
-  const tenantId = localStorage.getItem('benefit4j:tenant_id')
-  localStorage.removeItem('benefit4j:tenant_id')
+  sessionStorage.removeItem('benefit4j:access_token')
+  sessionStorage.removeItem('benefit4j:expires_at')
+  const tenantId = sessionStorage.getItem('benefit4j:tenant_id')
+  sessionStorage.removeItem('benefit4j:tenant_id')
 
   // 被踢/注销: 弹窗友好提示; 过期: 静默踢 (业务上用户操作时触发, 提示反而打断)
   if (code === BIZ_TOKEN_KICKED) {

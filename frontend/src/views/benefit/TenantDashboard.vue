@@ -151,9 +151,9 @@ const templateCount = ref(0)
 const subCount = ref(0)
 const recentSubs = ref<Subscription[]>([])
 
-const tenantId = computed(() => localStorage.getItem('benefit4j:tenant_id') || '-')
+const tenantId = computed(() => sessionStorage.getItem('benefit4j:tenant_id') || '-')
 const tokenPreview = computed(() => {
-  const token = localStorage.getItem('benefit4j:access_token')
+  const token = sessionStorage.getItem('benefit4j:access_token')
   if (!token) return '—'
   return `${token.slice(0, 8)}${'•'.repeat(12)}${token.slice(-4)}`
 })

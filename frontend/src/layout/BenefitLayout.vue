@@ -33,9 +33,9 @@ const collapsed = ref(false)
 let offAuthBus: (() => void) | null = null
 const onAuthExpired = (code: number) => {
   // 清本地登录态 (拦截器已在发起方清理过, 这里只处理被广播唤醒的标签页)
-  localStorage.removeItem('benefit4j:access_token')
-  localStorage.removeItem('benefit4j:expires_at')
-  localStorage.removeItem('benefit4j:tenant_id')
+  sessionStorage.removeItem('benefit4j:access_token')
+  sessionStorage.removeItem('benefit4j:expires_at')
+  sessionStorage.removeItem('benefit4j:tenant_id')
 
   if (code === 10205) {
     ElMessage.warning('账号已在别处登录, 请重新登录')
