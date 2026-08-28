@@ -133,7 +133,7 @@ CREATE INDEX idx_ubmx_asset_type ON ubmx_asset(asset_type) WHERE status = 'ACTIV
 ```sql
 CREATE TABLE ubmx_account (
     id              BIGINT       PRIMARY KEY,        -- 雪花 ID
-    app_id          BIGINT       NOT NULL,            -- 多租户隔离
+    tenant_id          BIGINT       NOT NULL,            -- 多租户隔离
     owner_type      VARCHAR(8)   NOT NULL
                     CHECK (owner_type IN ('USER','TENANT','MERCHANT','PLATFORM','EXTERNAL')),
     owner_id        BIGINT       NOT NULL,            -- userId / tenantId / merchantId
@@ -151,17 +151,17 @@ CREATE TABLE ubmx_account (
     ext             JSONB,                             -- 业务侧透传(资产级 ext)
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (app_id, owner_type, owner_id, asset_code),
+    UNIQUE (tenant_id, owner_type, owner_id, asset_code),
     -- 资金安全兜底(O11/F1): 边界户不约束;普通户非负;授信户允许负至 -credit_limit
     CHECK (account_type = 'BOUNDARY' OR balance >= -credit_limit)
 );
-CREATE INDEX idx_ubmx_account_owner ON ubmx_account(app_id, owner_type, owner_id)
+CREATE INDEX idx_ubmx_account_owner ON ubmx_account(tenant_id, owner_type, owner_id)
     WHERE status = 'ACTIVE';
 CREATE INDEX idx_ubmx_account_ext_gin ON ubmx_account USING GIN (ext);
 ```
 
 **关键约束**:
-- **唯一键保证账户唯一**:`(app_id, owner_type, owner_id, asset_code)` 不可重复开户
+- **唯一键保证账户唯一**:`(tenant_id, owner_type, owner_id, asset_code)` 不可重复开户
 - **资金安全 CHECK**: 普通户 `balance >= -credit_limit`(默认 `credit_limit=0` 即非负)——DB 兜底防超发,**这是资金安全的最后一道闸**
 - **`BOUNDARY` 边界户**(O11): `world:*` / `issue:*` / `fee:*` / `exchange:*` / `credit:*` 等虚拟边界户——**不参与 FOR UPDATE 锁、不更新 balance**(恒 0),只写 posting。边界户是全平台单行热点(所有充值都打 `world:wechat` 同一行),豁免后充值/发放 TPS 不再被一行锁限死;资产恒等式对账口径改为「用户域 Σbalance = Σ边界户流出 − Σ边界户流入」
 - `version` 沿用 `@Version` 乐观锁;CAS UPDATE 自带 `AND version = ?`,重试模式同 `UbmaSubscribeItem`
@@ -174,7 +174,7 @@ CREATE INDEX idx_ubmx_account_ext_gin ON ubmx_account USING GIN (ext);
 ```sql
 CREATE TABLE ubmx_posting (
     id              BIGINT       NOT NULL,
-    app_id          BIGINT       NOT NULL,
+    tenant_id          BIGINT       NOT NULL,
     tx_id           BIGINT       NOT NULL,            -- 业务交易号(同一笔业务多腿共享)
     tx_type         VARCHAR(32)  NOT NULL,            -- ISSUE | CONSUME | REFUND | TRANSFER | EXCHANGE | ADJUST | FREEZE | UNFREEZE
     ext_order_id    VARCHAR(64)  NOT NULL,            -- 幂等键(同订单同动作幂等)
@@ -193,7 +193,7 @@ CREATE TABLE ubmx_posting (
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id, created_at)
 ) PARTITION BY RANGE (created_at);
--- O10: 不在分区表上建 (app_id, ext_order_id, leg_seq) 唯一键——PG 要求分区表唯一约束必须含
+-- O10: 不在分区表上建 (tenant_id, ext_order_id, leg_seq) 唯一键——PG 要求分区表唯一约束必须含
 -- 分区键,带上 created_at 会稀释幂等(同订单跨日重放仍会成功,资金级缺陷)。
 -- 幂等闸移至 §2.7 ubmx_tx_order(不分区小表),posting 侧只留普通查询索引。
 -- 当前月 + ���认分区(沿用 V1.2.2 模式,后续 cron 月初自动建下月分区)
@@ -202,16 +202,16 @@ CREATE TABLE ubmx_posting_202608 PARTITION OF ubmx_posting
 CREATE TABLE ubmx_posting_default PARTITION OF ubmx_posting DEFAULT;
 
 CREATE INDEX idx_ubmx_posting_tx          ON ubmx_posting(tx_id);
-CREATE INDEX idx_ubmx_posting_src         ON ubmx_posting(app_id, src_account_id, created_at DESC);
-CREATE INDEX idx_ubmx_posting_dst         ON ubmx_posting(app_id, dst_account_id, created_at DESC);
-CREATE INDEX idx_ubmx_posting_order       ON ubmx_posting(app_id, ext_order_id);
+CREATE INDEX idx_ubmx_posting_src         ON ubmx_posting(tenant_id, src_account_id, created_at DESC);
+CREATE INDEX idx_ubmx_posting_dst         ON ubmx_posting(tenant_id, dst_account_id, created_at DESC);
+CREATE INDEX idx_ubmx_posting_order       ON ubmx_posting(tenant_id, ext_order_id);
 CREATE INDEX idx_ubmx_posting_asset_time  ON ubmx_posting(asset_code, created_at DESC);  -- O8: 对账按资产切片更快
 CREATE INDEX idx_ubmx_posting_ext_gin     ON ubmx_posting USING GIN (ext);
 ```
 
 **关键约束**:
 - **append-only**: 不允许 UPDATE/DELETE;唯一合法变更 = `INIT → FAILED` 幂等撤销标记(O6),`SUCCESS` 后永不变。分录在事务内直接以 `SUCCESS` 写入(INIT 仅供撤销流程使用)
-- `leg_seq` 是分录序号,一笔业务 N 条腿共享 `tx_id`;幂等由 `ubmx_tx_order` 表 `UNIQUE (app_id, ext_order_id)` 兜底(O10),posting 上 `idx_ubmx_posting_order` 仅作查询索引
+- `leg_seq` 是分录序号,一笔业务 N 条腿共享 `tx_id`;幂等由 `ubmx_tx_order` 表 `UNIQUE (tenant_id, ext_order_id)` 兜底(O10),posting 上 `idx_ubmx_posting_order` 仅作查询索引
 - 资产恒等式:每条腿的 `src_account` 与 `dst_account` 都属于 `asset_code`,**单事务强校验**
 - `tx_type` 大类: 入账 / 消费 / 退款 / 转账 / 兑换 / 调账 / 冻结 / 解冻,对应资产流向
   - **`tx_type='ISSUE'`** 专给钱包中台等渠道入账使用(任何调 issue 内部 API 的腿)
@@ -222,7 +222,7 @@ CREATE INDEX idx_ubmx_posting_ext_gin     ON ubmx_posting USING GIN (ext);
 ```sql
 CREATE TABLE ubmx_pre_consume (
     id              BIGINT       PRIMARY KEY,        -- 雪花 ID(事务表规范,非 serial)
-    app_id          BIGINT       NOT NULL,
+    tenant_id          BIGINT       NOT NULL,
     request_id      VARCHAR(64)  NOT NULL,            -- 调用方幂等键
     tx_id           BIGINT       NOT NULL,            -- 对应的 posting 主交易号(预扣腿已写入)
     charge_mode     VARCHAR(8)   NOT NULL
@@ -238,7 +238,7 @@ CREATE TABLE ubmx_pre_consume (
     expire_time     TIMESTAMPTZ  NOT NULL,            -- 默认 NOW() + 30min,scheduler 扫描过期
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (app_id, request_id)
+    UNIQUE (tenant_id, request_id)
 );
 CREATE INDEX idx_ubmx_pre_consume_expire
     ON ubmx_pre_consume(expire_time)
@@ -259,7 +259,7 @@ CREATE INDEX idx_ubmx_pre_consume_expire
 ```sql
 CREATE TABLE ubmx_freeze (
     id              BIGINT       PRIMARY KEY,        -- 雪花 ID
-    app_id          BIGINT       NOT NULL,
+    tenant_id          BIGINT       NOT NULL,
     account_id      BIGINT       NOT NULL,           -- 一致性应用层保证(禁外键)
     freeze_no       VARCHAR(64)  NOT NULL,            -- 业务冻结单号(幂等键)
     reason          VARCHAR(32)  NOT NULL             -- WITHDRAW | AFTER_SALE | RISK | PRE_CONSUME | OTHER
@@ -273,7 +273,7 @@ CREATE TABLE ubmx_freeze (
     ext             JSONB,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (app_id, freeze_no)
+    UNIQUE (tenant_id, freeze_no)
 );
 CREATE INDEX idx_ubmx_freeze_account ON ubmx_freeze(account_id) WHERE status = 'ACTIVE';
 ```
@@ -290,13 +290,13 @@ CREATE INDEX idx_ubmx_freeze_account ON ubmx_freeze(account_id) WHERE status = '
 
 ### 2.7 `ubmx_tx_order` 幂等闸(O10)
 
-> **问题(v0.3 评审 D1)**: posting 是分区表,PG 要求分区表唯一约束必须包含分区键——v0.3 的 `UNIQUE (app_id, ext_order_id, leg_seq, created_at)` 中 `created_at` 稀释了幂等:**同一订单跨日重放(网络重试/分区轮换后)仍会再次成功**。资金级缺陷。
+> **问题(v0.3 评审 D1)**: posting 是分区表,PG 要求分区表唯一约束必须包含分区键——v0.3 的 `UNIQUE (tenant_id, ext_order_id, leg_seq, created_at)` 中 `created_at` 稀释了幂等:**同一订单跨日重放(网络重试/分区轮换后)仍会再次成功**。资金级缺陷。
 > **修复**: 幂等闸移到独立不分区小表,posting 只留普通查询索引。
 
 ```sql
 CREATE TABLE ubmx_tx_order (
     id              BIGINT       PRIMARY KEY,        -- 雪花 ID
-    app_id          BIGINT       NOT NULL,
+    tenant_id          BIGINT       NOT NULL,
     ext_order_id    VARCHAR(64)  NOT NULL,           -- 调用方幂等键(issueOrderId / requestId)
     tx_type         VARCHAR(32)  NOT NULL,           -- ISSUE | CONSUME | REFUND | ...
     tx_id           BIGINT       NOT NULL,           -- 抢占成功后分配的业务交易号
@@ -305,7 +305,7 @@ CREATE TABLE ubmx_tx_order (
     result_snapshot JSONB,                           -- 首次成功响应快照(重放时原样返回)
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (app_id, ext_order_id)                    -- 真正的幂等闸(不分区,永不过期)
+    UNIQUE (tenant_id, ext_order_id)                    -- 真正的幂等闸(不分区,永不过期)
 );
 ```
 
@@ -330,7 +330,7 @@ PostingService.commit(LegSpec...):
   ]
 
   BEGIN
-    // 0. 幂等抢占(O10): INSERT ubmx_tx_order(app_id, ext_order_id)
+    // 0. 幂等抢占(O10): INSERT ubmx_tx_order(tenant_id, ext_order_id)
     //    唯一冲突 → 同参返回 result_snapshot; 异参抛 IDEMPOTENCY_CONFLICT
 
     // 1. 解析腿为账户 ID (lazy 开户; 识别 account_type='BOUNDARY' 边界户)
@@ -442,7 +442,7 @@ RetryTemplate 配置:
 | `GET /platform/assets/{code}` | 详情 |
 | `PATCH /platform/assets/{code}` | 改 name/precision/can_*/expire_policy |
 | `POST /platform/assets/{code}/suspend` \| `/resume` | 停用/启用(已有账户不冻结,新充值/发放禁止) |
-| `GET /platform/assets/accounts` | 运营查主体账户(**平台视角跨 app 合并**,`app_id` 参数可选收窄) |
+| `GET /platform/assets/accounts` | 运营查主体账户(**平台视角跨 app 合并**,`tenant_id` 参数可选收窄) |
 | `GET /platform/assets/postings` | 运营查流水(account_ref 如 `user:123`,跨 app 合并) |
 
 ### 4.2 账户查询(tenant/平台,APP token)
@@ -474,7 +474,7 @@ RetryTemplate 配置:
 {
   "issueOrderId": "WXCH-20260825-001",
   "txType": "ISSUE",
-  "appId": 100,
+  "tenantId": 100,
   "extOrderId": "WXCH-20260825-001",
   "legs": [
     {"src": "world:wechat", "dst": "user:1001:CNY", "amount": "100.00", "assetCode": "CNY"}
@@ -490,7 +490,7 @@ RetryTemplate 配置:
 {
   "issueOrderId": "ACT-20260825-001",
   "txType": "ISSUE",
-  "appId": 100,
+  "tenantId": 100,
   "legs": [
     {"src": "issue:POINTS", "dst": "user:1001:POINTS", "amount": "100", "assetCode": "POINTS"}
   ],
@@ -503,7 +503,7 @@ RetryTemplate 配置:
 {
   "issueOrderId": "RFD-20260825-001",
   "txType": "REFUND",
-  "appId": 100,
+  "tenantId": 100,
   "legs": [
     {"src": "merchant:2001:CNY", "dst": "user:1001:CNY", "amount": "30.00", "assetCode": "CNY"}
   ]
@@ -528,7 +528,7 @@ RetryTemplate 配置:
 请求:
 ```json
 {
-  "appId": 100,
+  "tenantId": 100,
   "oldExtOrderId": "FAILED-OLD-001",
   "oldTxType": "ISSUE",
   "reason": "BUSINESS_ROLLBACK"
@@ -597,7 +597,7 @@ RetryTemplate 配置:
 | CAS 乐观锁 | `@Version` + retry pattern (`ubma_subscribe_item`) | 直接搬 |
 | TCC 预扣/退款 | `consume/reserve/commit` + `RefundService` | 字段适配金额 |
 | 过期回收 | `ReserveTimeoutScheduler`(扫过期 RESERVED → refund) | 复用代码结构,改 SQL |
-| 幂等键 | framework4j-idempotency + `ubmx_tx_order` 表 `uk(app_id, ext_order_id)` | 双保险(O10) |
+| 幂等键 | framework4j-idempotency + `ubmx_tx_order` 表 `uk(tenant_id, ext_order_id)` | 双保险(O10) |
 | HMAC 签名 | `@RequiresSignature` runtime 域 | 直接覆盖 |
 | 限流 | `@RateLimit` runtime 域 | 直接覆盖 |
 | 审计 | `@Auditable` AOP | 直接覆盖 |
@@ -656,7 +656,7 @@ void checkFiatAllowed() {
 
 ### 8.2 索引覆盖
 
-- 主查询路径:**账户余额**(`uk(app_id, owner_type, owner_id, asset_code)`)、**流水翻页**(`idx_posting_src/dst`)、**预扣单过期**(`idx_pre_consume_expire` 部分索引)
+- 主查询路径:**账户余额**(`uk(tenant_id, owner_type, owner_id, asset_code)`)、**流水翻页**(`idx_posting_src/dst`)、**预扣单过期**(`idx_pre_consume_expire` 部分索引)
 - 对账路径:按 `created_at` 分区裁剪扫描 + `idx_posting_asset_time` 按资产切片(对账每资产一次扫描,避免全表)
 - **`ubmx_posting` 首期即分区**(O1):DDL 沿用 V1.2.2 pg_pathman 模式无新增成本;后续 SLO 月初 cron 自动建下月分区
 

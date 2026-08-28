@@ -1,10 +1,10 @@
-# ADR-0006: app_secret AES-256-GCM 加密 + TypeHandler lazy key
+# ADR-0006: tenant_secret AES-256-GCM 加密 + TypeHandler lazy key
 
 > **状态**: 已实施 · **日期**: 2026-08 · **版本**: V1.2.2
 
 ## 背景
 
-`ubma_application.app_secret` 明文存储(安全风险)。需加密 + 自动加解密,但 framework4j `EncryptedFieldTypeHandler` 无无参构造(MyBatis 反射实例化失败)。
+`ubma_tenant.tenant_secret` 明文存储(安全风险)。需加密 + 自动加解密,但 framework4j `EncryptedFieldTypeHandler` 无无参构造(MyBatis 反射实例化失败)。
 
 ## 决策
 
@@ -16,7 +16,7 @@
 - lazy key:运行时(set/get)取,context 必就绪,保证 insert/select 用同一真 key
 
 ## 后果
-- ✅ app_secret DB 存密文,读回明文,自动加解密
+- ✅ tenant_secret DB 存密文,读回明文,自动加解密
 - ✅ 单测(mock 无容器)fallback key 兜底
 - ✅ reset-secret 用 wrapper.set 手动 AesGcm 加密(绕 ext JSONB update cast)
 - ⚠️ 每次加解密取 Bean(HashMap lookup,开销可忽略)

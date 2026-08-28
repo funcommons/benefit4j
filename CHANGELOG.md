@@ -2,6 +2,23 @@
 
 本文件记录 benefit4j（用户权益中台）的版本演进。
 
+## [未发布] 2026-08-28
+
+### 变更 — 术语彻改:应用(app) → 租户(tenant)
+
+零业务规则变更的纯重命名(趁零外部接入方窗口完成,API 为破坏性变更):
+
+- **DB**: V1.4.0 迁移——22 列 `app_id`→`tenant_id`、`ubma_application`→`ubma_tenant`(`app_secret`→`tenant_secret`)、37 索引/约束名同步;分区父表改名自动传播;幂等可重放
+- **Java**: `UbmaApplication`→`UbmaTenant`、~1000 处 `appId/app_id`→`tenantId/tenant_id`;JWT claim `app_id`→`tenant_id`(存量 token 失效);it/app yml 双键(`appid`/`app_id`)收敛为 `[tenant_id]`
+- **API**: `/platform/applications`→`/platform/tenants`,query/path 字段同步;`remote-app-id` 配置→`remote-tenant-id`
+- **前端**: `Apps.vue`→`Tenants.vue`、路由 `/apps`→`/tenants`、i18n 全量「应用」→「租户」
+- **不变**: token 型别 APP/OPS(技术角色)、`PLATFORM_CLIENT_ID/SECRET`(平台凭据)、`client_id/client_secret`(OAuth 参数)、`@OpenId`
+- **回归**: 后端 421/421(IT 146 含 smoke 4 + 单测 279)、前端 typecheck/build/vitest 基线一致;真实进程验证 `/platform/tenants` CRUD + smoke 4/4
+
+### 修复 — 测试基建
+
+- vitest 误扫 `e2e/`(Playwright 用例)致 `npm test` 恒挂 79 个 → 显式 exclude
+
 ## [1.0.0] - 2026-08-23
 
 首个正式版本。覆盖权益全生命周期：发放 → 核销 → 退款 → 补偿，多源额度桶 + TCC 两阶段扣减，双模式集成（local / remote / 独立部署）。
@@ -23,7 +40,7 @@
 - **framework4j 13 模块全接入**：`@RequiresToken` 鉴权 / `@RequiresSignature` 接口签名 / `@RateLimit` 限流 / `Idempotency-Key` 幂等 / `@Auditable` 审计 + Hash Chain / `@Sensitive` AES-256-GCM 字段加密 / SQL 追踪。
 - **runtime 域 HMAC-SHA256 签名**：前端 `benefitClient` 拦截器对 `/benefit/api/v1/runtime/**` 注入 `X-Access-Key/X-Timestamp/X-Nonce/X-Signature`，与后端 `framework4j-signature` 对齐（`METHOD\nPATH\nTS\nNONCE\nBODY_MD5_HEX` + Base64 HMAC-SHA256）。
 - **P0 资金安全**：扣减并发重试 + partialAllowed=false 不足回滚 + `DuplicateKey→409` / `RateLimit→429` / `Signature→401` 异常 handler + 兜底 500。
-- **app_secret AES-256-GCM 加密**：`BenefitAppSecretTypeHandler` lazy key（见 [ADR-0006](documents/adr/0006-app-secret-encryption-lazy-key.md)）。
+- **tenant_secret AES-256-GCM 加密**：`BenefitAppSecretTypeHandler` lazy key（见 [ADR-0006](documents/adr/0006-app-secret-encryption-lazy-key.md)）。
 
 ### 新增 — 性能与数据
 

@@ -19,5 +19,5 @@ PG 原生表分区(`PARTITION BY RANGE (created_at)` 月分区),不引 ShardingS
 - ✅ `ubma_consume` 重建为分区表(主键 `(id, created_at)` + 月分区 + DEFAULT)
 - ✅ 归档接口 `POST /ops/jobs/archive-consumes`(detach/DELETE 旧分区)
 - ✅ 358 行迁移成功,MyBatis 透明(分区表 selectById 走全局索引)
-- ⚠️ 50万 DAU+ 需分库分表(按 app_id 分片),当前分区是过渡
+- ⚠️ 50万 DAU+ 需分库分表(按 tenant_id 分片),当前分区是过渡
 - ⚠️ 分区表主键含 created_at(MyBatis @TableId 单列,selectById 扫所有分区,数据小可接受)
