@@ -128,16 +128,18 @@ framework4j:
 
 ## 7. 实施计划(framework4j 仓,7 步,每步独立可交付)
 
-| 步 | 内容 | 估时 | 验证 |
-|---|---|---|---|
-| 1 | 模块骨架(pom/自动配置/Properties)+ 依赖版本对齐 | 0.5d | demo 启动 |
-| 2 | f4j_tenant 迁移+实体+Mapper+CRUD(加密/脱敏) | 1d | 模块 IT(CRUD/唯一索引) |
-| 3 | 双守卫注解+拦截器+异常映射 | 0.5d | IT(双面 403/放行) |
-| 4 | TenantAuthTemplate+内置端点(防爆破/合成租户/宽限期) | 1d | IT(移植泛化 TenantSecurityIT) |
-| 5 | SecretService(reset 撤销会话)+ RegistrationKeyService | 1d | IT |
-| 6 | UserIdContext + RlsAssistant(OFF/POLICY/FULL) | 0.5d | IT |
-| 7 | tenant-tck test-jar + framework4j 文档 | 1d | benefit4j 试接入跑 tck |
-| — | **合计** | **~5.5d** | 打 tag v1.5.0 → JitPack |
+| 步 | 内容 | 估时 | 验证 | 状态 |
+|---|---|---|---|---|
+| 1 | 模块骨架(pom/自动配置/Properties)+ 依赖版本对齐 | 0.5d | demo 启动 | ✅ `67e3fa3` |
+| 2 | 租户表实体 SPI + DDL 初始化器(AUTO 幂等建表/补列,PROVIDED 模板) | 1d | 模块 IT(建表/幂等/补列) | ✅ `a6484e7` |
+| 3 | @PlatformDomain/@TenantDomain 双守卫注解+拦截器+MVC 自动注册 | 0.5d | IT(双面 403/放行) | ✅ `0c82f49` |
+| 4 | TenantAuthTemplate+内置端点(防爆破/合成租户/宽限期/policy 代填) | 1d | IT(认证矩阵 8 用例) | ✅ `6021ec5` |
+| 5 | TenantSecretService(reset 撤销会话)+ TenantSessionRevoker + RegistrationKeyService | 1d | IT(6 用例) | ✅ `c8dbdbb` |
+| 6 | UserIdContext + RlsAssistant(OFF/POLICY/FULL) | 0.5d | IT(7 用例) | ✅ `532c740` |
+| 7 | tenant-tck test-jar(结构 T1-T3 可跑,行为 T4-T8 项目触发)+ README 全绿 | 1d | tck 编译过 + benefit4j 试接入 | ✅ `0b7f097` |
+| — | **合计** | **~5.5d** | 打 tag v1.5.0 → JitPack | **7/7 完成,56 测试全绿** |
+
+> **P1 待办**:framework4j 打 tag `v1.5.0`(含 tenant 模块)→ benefit4j 升依赖接入(P2)。
 
 ## 8. 风险与对策
 
