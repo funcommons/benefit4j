@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.*;
 @RequiresSignature   // 对外 runtime API 强制 HMAC-SHA256 签名防重放 (X-Access-Key/X-Timestamp/X-Nonce/X-Signature)
 public class BenefitRuntimeController {
 
+    /** 租户域强校验(§5.3/§6.2 L1): 真实租户身份(tenant_id>0)才可操作/记账;平台身份(0)拒绝 */
+    @org.springframework.web.bind.annotation.ModelAttribute
+    void requireTenantIdentity() {
+        fun.commons.benefit4j.security.TenantIdentityGuard.requireTenant();
+    }
+
+
     private final BenefitRuntimeClient client;
 
     // 消费/资金类: 50 次/分/App (严格, 防刷)

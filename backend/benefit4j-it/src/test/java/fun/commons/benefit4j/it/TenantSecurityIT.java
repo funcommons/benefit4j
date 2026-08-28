@@ -122,6 +122,23 @@ public class TenantSecurityIT extends BaseMapperTest {
     }
 
     @Test
+    public void platformIdentity_cannotActAsTenant() {
+        // §6.2 L1 语义: 平台身份(tenant_id=0)是管理面,不是记账主体 ——
+        // 打租户域/资金域 controller 的身份守卫应拒绝(否则账记到 tenant_id=0 幽灵租户)
+        fun.commons.framework4j.accesstoken.context.TokenContext.set("APP", java.util.Map.of("tenant_id", 0L));
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            fun.commons.benefit4j.security.TenantIdentityGuard::requireTenant)
+                    .isInstanceOf(SecurityException.class);
+            org.assertj.core.api.Assertions.assertThatCode(
+                            fun.commons.benefit4j.security.PlatformIdentityGuard::requirePlatform)
+                    .doesNotThrowAnyException();   // 平台身份在平台域仍放行(同一 claim,两面守卫)
+        } finally {
+            fun.commons.framework4j.accesstoken.context.TokenContext.clear();
+        }
+    }
+
+    @Test
     public void rlsPolicies_inPlace_notForcing() throws Exception {
         // V1.4.1: 六表 RLS 就位(ENABLE 不 FORCE,零行为变化),策略 tenant_isolation 存在
         try (var conn = AssetsMigrations.open();

@@ -40,6 +40,13 @@ import java.util.Map;
 @RequiresSignature
 public class BenefitAssetsRuntimeController {
 
+    /** 租户域强校验(§5.3/§6.2 L1): 真实租户身份(tenant_id>0)才可操作/记账;平台身份(0)拒绝 */
+    @org.springframework.web.bind.annotation.ModelAttribute
+    void requireTenantIdentity() {
+        fun.commons.benefit4j.security.TenantIdentityGuard.requireTenant();
+    }
+
+
     private final PostingService postingService;
     private final PreConsumeService preConsumeService;
     private final AccountService accountService;
