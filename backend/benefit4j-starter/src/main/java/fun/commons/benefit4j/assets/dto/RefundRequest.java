@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class RefundRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     private String requestId;
 }

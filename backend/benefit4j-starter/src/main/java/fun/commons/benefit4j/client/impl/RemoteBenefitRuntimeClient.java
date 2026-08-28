@@ -18,52 +18,52 @@ public class RemoteBenefitRuntimeClient extends AbstractRemoteBenefitClient impl
     }
 
     @Override
-    public Object postSubscriptions(Long appId, PostSubscriptionsRequest req) {
-        return invoke("/benefit/api/v1/runtime/subscriptions", "POST", appId, req);
+    public Object postSubscriptions(Long tenantId, PostSubscriptionsRequest req) {
+        return invoke("/benefit/api/v1/runtime/subscriptions", "POST", tenantId, req);
     }
 
     @Override
-    public Object postSubscriptionsCancel(Long appId, PostSubscriptionsCancelRequest req) {
-        return invoke("/benefit/api/v1/runtime/subscriptions/cancel", "POST", appId, req);
+    public Object postSubscriptionsCancel(Long tenantId, PostSubscriptionsCancelRequest req) {
+        return invoke("/benefit/api/v1/runtime/subscriptions/cancel", "POST", tenantId, req);
     }
 
     @Override
-    public Object getSubscriptionsSubscribeId(Long appId, String subscribeId) {
-        return invoke("/benefit/api/v1/runtime/subscriptions/" + subscribeId, "GET", appId, null);
+    public Object getSubscriptionsSubscribeId(Long tenantId, String subscribeId) {
+        return invoke("/benefit/api/v1/runtime/subscriptions/" + subscribeId, "GET", tenantId, null);
     }
 
     @Override
-    public Object postConsumesDirect(Long appId, PostConsumesDirectRequest req) {
-        return invoke("/benefit/api/v1/runtime/consumes/direct", "POST", appId, req);
+    public Object postConsumesDirect(Long tenantId, PostConsumesDirectRequest req) {
+        return invoke("/benefit/api/v1/runtime/consumes/direct", "POST", tenantId, req);
     }
 
     @Override
-    public Object postConsumesReserve(Long appId, PostConsumesReserveRequest req) {
-        return invoke("/benefit/api/v1/runtime/consumes/reserve", "POST", appId, req);
+    public Object postConsumesReserve(Long tenantId, PostConsumesReserveRequest req) {
+        return invoke("/benefit/api/v1/runtime/consumes/reserve", "POST", tenantId, req);
     }
 
     @Override
-    public Object postConsumesCommit(Long appId, PostConsumesCommitRequest req) {
-        return invoke("/benefit/api/v1/runtime/consumes/commit", "POST", appId, req);
+    public Object postConsumesCommit(Long tenantId, PostConsumesCommitRequest req) {
+        return invoke("/benefit/api/v1/runtime/consumes/commit", "POST", tenantId, req);
     }
 
     @Override
-    public Object postConsumesRelease(Long appId, PostConsumesReleaseRequest req) {
-        return invoke("/benefit/api/v1/runtime/consumes/release", "POST", appId, req);
+    public Object postConsumesRelease(Long tenantId, PostConsumesReleaseRequest req) {
+        return invoke("/benefit/api/v1/runtime/consumes/release", "POST", tenantId, req);
     }
 
     @Override
-    public Object postRefunds(Long appId, PostRefundsRequest req) {
-        return invoke("/benefit/api/v1/runtime/refunds", "POST", appId, req);
+    public Object postRefunds(Long tenantId, PostRefundsRequest req) {
+        return invoke("/benefit/api/v1/runtime/refunds", "POST", tenantId, req);
     }
 
     @Override
-    public Object getUsersUseridAssets(Long appId, String userid) {
-        return invoke("/benefit/api/v1/runtime/users/" + userid + "/assets", "GET", appId, null);
+    public Object getUsersUseridAssets(Long tenantId, String userid) {
+        return invoke("/benefit/api/v1/runtime/users/" + userid + "/assets", "GET", tenantId, null);
     }
 
     @Override
-    public Object getUsersUseridConsumes(Long appId, String userid) {
-        return invoke("/benefit/api/v1/runtime/users/" + userid + "/consumes", "GET", appId, null);
+    public Object getUsersUseridConsumes(Long tenantId, String userid) {
+        return invoke("/benefit/api/v1/runtime/users/" + userid + "/consumes", "GET", tenantId, null);
     }
 }

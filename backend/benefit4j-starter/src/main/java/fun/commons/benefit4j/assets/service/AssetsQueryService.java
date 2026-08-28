@@ -21,9 +21,9 @@ public class AssetsQueryService {
     private final UbmxPostingMapper postingMapper;
 
     /** 主体名下所有资产账户(§4.2);assetCode 可选过滤 */
-    public List<UbmxAccount> listAccounts(Long appId, String ownerType, Long ownerId, String assetCode) {
+    public List<UbmxAccount> listAccounts(Long tenantId, String ownerType, Long ownerId, String assetCode) {
         return accountMapper.selectList(new LambdaQueryWrapper<UbmxAccount>()
-                .eq(UbmxAccount::getAppId, appId)
+                .eq(UbmxAccount::getTenantId, tenantId)
                 .eq(UbmxAccount::getOwnerType, ownerType)
                 .eq(UbmxAccount::getOwnerId, ownerId)
                 .eq(StringUtils.hasText(assetCode), UbmxAccount::getAssetCode, assetCode)
@@ -31,12 +31,12 @@ public class AssetsQueryService {
     }
 
     /** 账户流水分页(§4.5,src 或 dst 命中) */
-    public List<UbmxPosting> listPostings(Long appId, Long accountId, int page, int size) {
+    public List<UbmxPosting> listPostings(Long tenantId, Long accountId, int page, int size) {
         int p = Math.max(1, page);
         int s = Math.min(Math.max(1, size), 100);
         Page<UbmxPosting> pager = new Page<>(p, s);
         return postingMapper.selectPage(pager, new LambdaQueryWrapper<UbmxPosting>()
-                .eq(UbmxPosting::getAppId, appId)
+                .eq(UbmxPosting::getTenantId, tenantId)
                 .and(w -> w.eq(UbmxPosting::getSrcAccountId, accountId)
                         .or().eq(UbmxPosting::getDstAccountId, accountId))
                 .orderByDesc(UbmxPosting::getCreatedAt)
@@ -44,36 +44,36 @@ public class AssetsQueryService {
     }
 
     /** 按业务交易号查全腿(§4.5) */
-    public List<UbmxPosting> listPostingsByTx(Long appId, Long txId) {
+    public List<UbmxPosting> listPostingsByTx(Long tenantId, Long txId) {
         return postingMapper.selectList(new LambdaQueryWrapper<UbmxPosting>()
-                .eq(UbmxPosting::getAppId, appId)
+                .eq(UbmxPosting::getTenantId, tenantId)
                 .eq(UbmxPosting::getTxId, txId)
                 .orderByAsc(UbmxPosting::getLegSeq));
     }
 
-    // ---------- 平台运营视角(P3 前端;平台 token app_id=0 不参与过滤,appId 参数可选收窄) ----------
+    // ---------- 平台运营视角(P3 前端;平台 token tenant_id=0 不参与过滤,tenantId 参数可选收窄) ----------
 
     /** 按主体查名下账户(跨 app 合并;同 owner 在不同 app 各有账户时全部返回) */
-    public List<UbmxAccount> listAccountsByOwner(String ownerType, Long ownerId, String assetCode, Long appId) {
+    public List<UbmxAccount> listAccountsByOwner(String ownerType, Long ownerId, String assetCode, Long tenantId) {
         return accountMapper.selectList(new LambdaQueryWrapper<UbmxAccount>()
                 .eq(UbmxAccount::getOwnerType, ownerType)
                 .eq(UbmxAccount::getOwnerId, ownerId)
                 .eq(StringUtils.hasText(assetCode), UbmxAccount::getAssetCode, assetCode)
-                .eq(appId != null, UbmxAccount::getAppId, appId)
+                .eq(tenantId != null, UbmxAccount::getTenantId, tenantId)
                 .orderByAsc(UbmxAccount::getAssetCode));
     }
 
     /** 按主体查流水分页(先解析名下账户,再合并 src/dst 命中;账户不存在返回空) */
     public List<UbmxPosting> listPostingsByOwner(String ownerType, Long ownerId, String assetCode,
-            Long appId, int page, int size) {
-        List<Long> accountIds = listAccountsByOwner(ownerType, ownerId, assetCode, appId)
+            Long tenantId, int page, int size) {
+        List<Long> accountIds = listAccountsByOwner(ownerType, ownerId, assetCode, tenantId)
                 .stream().map(UbmxAccount::getId).toList();
         if (accountIds.isEmpty()) return List.of();
         int p = Math.max(1, page);
         int s = Math.min(Math.max(1, size), 100);
         Page<UbmxPosting> pager = new Page<>(p, s);
         return postingMapper.selectPage(pager, new LambdaQueryWrapper<UbmxPosting>()
-                .eq(appId != null, UbmxPosting::getAppId, appId)
+                .eq(tenantId != null, UbmxPosting::getTenantId, tenantId)
                 .and(w -> w.in(UbmxPosting::getSrcAccountId, accountIds)
                         .or().in(UbmxPosting::getDstAccountId, accountIds))
                 .orderByDesc(UbmxPosting::getCreatedAt)

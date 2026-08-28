@@ -1,8 +1,8 @@
 package fun.commons.benefit4j.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import fun.commons.benefit4j.entity.UbmaApplication;
-import fun.commons.benefit4j.mapper.UbmaApplicationMapper;
+import fun.commons.benefit4j.entity.UbmaTenant;
+import fun.commons.benefit4j.mapper.UbmaTenantMapper;
 import fun.commons.benefit4j.service.BenefitAuthService;
 import fun.commons.framework4j.accesstoken.config.AccessTokenProperties;
 import fun.commons.framework4j.accesstoken.core.AccessTokenGenerator;
@@ -22,7 +22,7 @@ import java.util.Map;
 @ConditionalOnClass(AccessTokenGenerator.class)
 public class DefaultBenefitAuthService implements BenefitAuthService {
 
-    private final UbmaApplicationMapper applicationMapper;
+    private final UbmaTenantMapper applicationMapper;
     private final ObjectProvider<AccessTokenGenerator> tokenGeneratorProvider;
     private final AccessTokenProperties tokenProperties;
 
@@ -43,13 +43,13 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
             return ApiResponse.fail(400, "client_id和client_secret不能为空");
         }
 
-        UbmaApplication app = resolveApp(clientId, clientSecret);
+        UbmaTenant app = resolveApp(clientId, clientSecret);
         if (app == null) {
             return ApiResponse.fail(401, "client_id或client_secret无效");
         }
 
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("app_id", app.getId());
+        claims.put("tenant_id", app.getId());
 
         String token = tokenGeneratorProvider.getObject().generateToken(TOKEN_TYPE, claims);
 
@@ -67,44 +67,44 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
     }
 
     /**
-     * 查找匹配 clientId/secret 的应用, 用于把应用 id 写入 token claim。
+     * 查找匹配 clientId/secret 的租户, 用于把租户 id 写入 token claim。
      *
      * client_id 接受三种形式 (按优先级):
      *   1. UI 暴露的 OpenID (Base62 编码 + 校验位), 例如 "jZyCTw8xIjz4"
      *   2. 原始 Long id, 例如 "1"
-     *   3. 应用 name (向后兼容), 例如 "Demo App"
+     *   3. 租户 name (向后兼容), 例如 "Demo Tenant"
      *
      * 平台凭据 (benefit4j.security.platform.*) 不依赖 DB 行存在 —
-     * 平台 token 的 app_id claim 用合成对象 (id=0) 即可, 平台控制器走 query string 的 app_id 而非 token claim.
+     * 平台 token 的 tenant_id claim 用合成对象 (id=0) 即可, 平台控制器走 query string 的 tenant_id 而非 token claim.
      */
-    private UbmaApplication resolveApp(String clientId, String clientSecret) {
+    private UbmaTenant resolveApp(String clientId, String clientSecret) {
         if (platformClientId.equals(clientId) && platformClientSecret.equals(clientSecret)) {
-            return syntheticPlatformApp();
+            return syntheticPlatformTenant();
         }
-        UbmaApplication app = findAppByClientId(clientId);
-        if (app == null || !clientSecret.equals(app.getAppSecret())) return null;
+        UbmaTenant app = findAppByClientId(clientId);
+        if (app == null || !clientSecret.equals(app.getTenantSecret())) return null;
         return app;
     }
 
-    private UbmaApplication syntheticPlatformApp() {
-        UbmaApplication app = new UbmaApplication();
+    private UbmaTenant syntheticPlatformTenant() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(0L);
         app.setName(platformClientId);
-        app.setAppSecret(platformClientSecret);
+        app.setTenantSecret(platformClientSecret);
         app.setStatus("ACTIVE");
-        app.setDescription("Synthetic platform app — used when no DB row is provisioned");
+        app.setDescription("Synthetic platform tenant — used when no DB row is provisioned");
         return app;
     }
 
-    private UbmaApplication findAppByClientId(String clientId) {
+    private UbmaTenant findAppByClientId(String clientId) {
         // 1. 尝试 OpenID 解码 (UI 显示的字符串形如 "jZyCTw8xIjz4")
         if (IdObfuscator.isValid(clientId)) {
             try {
                 long rawId = IdObfuscator.fromOpenId(clientId);
-                LambdaQueryWrapper<UbmaApplication> q = new LambdaQueryWrapper<>();
-                q.eq(UbmaApplication::getId, rawId)
-                        .eq(UbmaApplication::getStatus, "ACTIVE");
-                UbmaApplication app = applicationMapper.selectOne(q);
+                LambdaQueryWrapper<UbmaTenant> q = new LambdaQueryWrapper<>();
+                q.eq(UbmaTenant::getId, rawId)
+                        .eq(UbmaTenant::getStatus, "ACTIVE");
+                UbmaTenant app = applicationMapper.selectOne(q);
                 if (app != null) return app;
             } catch (Exception ignored) {
                 // 退化到下面的查找
@@ -114,19 +114,19 @@ public class DefaultBenefitAuthService implements BenefitAuthService {
         if (clientId.matches("\\d+")) {
             try {
                 long rawId = Long.parseLong(clientId);
-                LambdaQueryWrapper<UbmaApplication> q = new LambdaQueryWrapper<>();
-                q.eq(UbmaApplication::getId, rawId)
-                        .eq(UbmaApplication::getStatus, "ACTIVE");
-                UbmaApplication app = applicationMapper.selectOne(q);
+                LambdaQueryWrapper<UbmaTenant> q = new LambdaQueryWrapper<>();
+                q.eq(UbmaTenant::getId, rawId)
+                        .eq(UbmaTenant::getStatus, "ACTIVE");
+                UbmaTenant app = applicationMapper.selectOne(q);
                 if (app != null) return app;
             } catch (NumberFormatException ignored) {
                 // 退化到下面的查找
             }
         }
         // 3. 退化到按 name 查找 (向后兼容)
-        LambdaQueryWrapper<UbmaApplication> query = new LambdaQueryWrapper<>();
-        query.eq(UbmaApplication::getName, clientId)
-                .eq(UbmaApplication::getStatus, "ACTIVE");
+        LambdaQueryWrapper<UbmaTenant> query = new LambdaQueryWrapper<>();
+        query.eq(UbmaTenant::getName, clientId)
+                .eq(UbmaTenant::getStatus, "ACTIVE");
         return applicationMapper.selectOne(query);
     }
 

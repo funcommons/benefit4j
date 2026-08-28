@@ -17,42 +17,42 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCreateBenefitItem_success() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
 
         PostBenefitItemsRequest req = new PostBenefitItemsRequest();
         req.setName("VIP权益项");
 
-        Map<String, Object> data = extractData(tenantService.postBenefitItems(appId, req));
+        Map<String, Object> data = extractData(tenantService.postBenefitItems(tenantId, req));
         assertThat(data.get("item_id")).isNotNull();
         assertThat(data.get("status")).isEqualTo("ACTIVE");
     }
 
     @Test
     void testCreateBenefitItem_duplicateName_rejected() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
 
         PostBenefitItemsRequest req = new PostBenefitItemsRequest();
         req.setName("重复名称项");
 
-        extractData(tenantService.postBenefitItems(appId, req));
+        extractData(tenantService.postBenefitItems(tenantId, req));
 
         PostBenefitItemsRequest req2 = new PostBenefitItemsRequest();
         req2.setName("重复名称项");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postBenefitItems(appId, req2);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postBenefitItems(tenantId, req2);
         assertThat(resp.isFail()).isTrue();
     }
 
     @Test
     void testUpdateBenefitItem_success() {
-        Long appId = createApp().getId();
-        UbmaBenefitItem item = createBenefitItem(appId);
+        Long tenantId = createTenant().getId();
+        UbmaBenefitItem item = createBenefitItem(tenantId);
 
         PutBenefitItemsItemIdRequest req = new PutBenefitItemsItemIdRequest();
         req.setName("更新后的名称");
         req.setDescription("新描述");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.putBenefitItemsItemId(appId, String.valueOf(item.getId()), req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.putBenefitItemsItemId(tenantId, String.valueOf(item.getId()), req);
         assertThat(resp.isSuccess()).isTrue();
 
         UbmaBenefitItem updated = benefitItemMapper.selectById(item.getId());
@@ -62,10 +62,10 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDeleteBenefitItem_noSubscriptionRef_success() {
-        Long appId = createApp().getId();
-        UbmaBenefitItem item = createBenefitItem(appId);
+        Long tenantId = createTenant().getId();
+        UbmaBenefitItem item = createBenefitItem(tenantId);
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitItemsItemId(appId, String.valueOf(item.getId()));
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitItemsItemId(tenantId, String.valueOf(item.getId()));
         assertThat(resp.isSuccess()).isTrue();
 
         // Verify soft delete (@TableLogic)
@@ -75,12 +75,12 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDeleteBenefitItem_hasSubscriptionRef_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
-        createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
+        createSubscription(tenantId, "user-001", setId);
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitItemsItemId(appId, String.valueOf(itemId));
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitItemsItemId(tenantId, String.valueOf(itemId));
         assertThat(resp.isFail()).isTrue();
     }
 
@@ -88,8 +88,8 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCreateBenefitSet_withItemRefs_success() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
 
         PostBenefitSetsRequest req = new PostBenefitSetsRequest();
         req.setName("标准VIP套餐");
@@ -104,17 +104,17 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         ref.setRefreshCycleUnit("day");
         req.setItems(List.of(ref));
 
-        Map<String, Object> data = extractData(tenantService.postBenefitSets(appId, req));
+        Map<String, Object> data = extractData(tenantService.postBenefitSets(tenantId, req));
         assertThat(data.get("set_id")).isNotNull();
         assertThat(data.get("status")).isEqualTo("ACTIVE");
     }
 
     @Test
     void testUpdateBenefitSet_replaceItemRefs_success() {
-        Long appId = createApp().getId();
-        Long itemId1 = createBenefitItem(appId, "Item1").getId();
-        Long itemId2 = createBenefitItem(appId, "Item2").getId();
-        Long setId = createBenefitSet(appId, itemId1).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId1 = createBenefitItem(tenantId, "Item1").getId();
+        Long itemId2 = createBenefitItem(tenantId, "Item2").getId();
+        Long setId = createBenefitSet(tenantId, itemId1).getId();
 
         // Replace refs: remove item1, add item2
         PutBenefitSetsSetIdRequest req = new PutBenefitSetsSetIdRequest();
@@ -126,7 +126,7 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         ref.setRefreshCycleUnit("day");
         req.setItems(List.of(ref));
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.putBenefitSetsSetId(appId, String.valueOf(setId), req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.putBenefitSetsSetId(tenantId, String.valueOf(setId), req);
         assertThat(resp.isSuccess()).isTrue();
 
         // Verify old refs deleted, new ref inserted
@@ -140,11 +140,11 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDeleteBenefitSet_noActiveSubscriptions_success() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitSetsSetId(appId, String.valueOf(setId));
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitSetsSetId(tenantId, String.valueOf(setId));
         assertThat(resp.isSuccess()).isTrue();
 
         // Verify soft delete
@@ -154,12 +154,12 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDeleteBenefitSet_hasActiveSubscriptions_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
-        createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
+        createSubscription(tenantId, "user-001", setId);
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitSetsSetId(appId, String.valueOf(setId));
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.deleteBenefitSetsSetId(tenantId, String.valueOf(setId));
         assertThat(resp.isFail()).isTrue();
     }
 
@@ -167,10 +167,10 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCompensationAdd_createsNewBucket() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -187,7 +187,7 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setSourceType("COMPENSATION");
         req.setPriority(0);
 
-        Map<String, Object> data = extractData(tenantService.postCompensations(appId, req));
+        Map<String, Object> data = extractData(tenantService.postCompensations(tenantId, req));
         assertThat(data.get("adjust_type")).isEqualTo("ADD");
 
         // 父订阅总额 (含补偿) 累加
@@ -217,11 +217,11 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
     void testPostSubscriptions_bucketHasSetDefaults() {
         // V1.2.0 多源桶: Tenant postSubscriptions 创建订阅时应把
         // source_type=SUBSCRIPTION / bucket_priority=set.priority / expires_at=subscribe.dateEnd 拷到桶上
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
         int setPriority = 42;
-        Long setId = createBenefitSet(appId, 100, setPriority, 10, itemId).getId();
-        String subId = createSubscription(appId, "bucket-defaults-user-" + uniqueAppid(), setId);
+        Long setId = createBenefitSet(tenantId, 100, setPriority, 10, itemId).getId();
+        String subId = createSubscription(tenantId, "bucket-defaults-user-" + uniqueTenantid(), setId);
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -239,10 +239,10 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCompensationReduce_decreasesQuotaLimit() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -257,7 +257,7 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setAdjustNum(10);
         req.setAdjustType("REDUCE");
 
-        extractData(tenantService.postCompensations(appId, req));
+        extractData(tenantService.postCompensations(tenantId, req));
 
         UbmaSubscribe updatedSub = readSubscribe(subId);
         assertThat(updatedSub.getQuotaLimit()).isEqualTo(20); // 30 - 10
@@ -268,18 +268,18 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCompensationReduce_belowConsumed_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Consume 20
         PostConsumesDirectRequest consumeReq = new PostConsumesDirectRequest();
         consumeReq.setUserid("user-001");
         consumeReq.setItemId(String.valueOf(itemId));
-        consumeReq.setExternalOrderId("ext-comp-" + uniqueAppid());
+        consumeReq.setExternalOrderId("ext-comp-" + uniqueTenantid());
         consumeReq.setConsumeNum(20);
-        extractData(runtimeService.postConsumesDirect(appId, consumeReq));
+        extractData(runtimeService.postConsumesDirect(tenantId, consumeReq));
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -295,16 +295,16 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setAdjustNum(15);
         req.setAdjustType("REDUCE");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(appId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(tenantId, req);
         assertThat(resp.isFail()).isTrue();
     }
 
     @Test
     void testCompensationReduce_belowZero_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -320,24 +320,24 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setAdjustNum(50);
         req.setAdjustType("REDUCE");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(appId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(tenantId, req);
         assertThat(resp.isFail()).isTrue();
     }
 
     @Test
     void testCompensation_onExhaustedSubscription_success() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 5, 10, 5, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 5, 10, 5, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Consume all to exhaust
         PostConsumesDirectRequest consumeReq = new PostConsumesDirectRequest();
         consumeReq.setUserid("user-001");
         consumeReq.setItemId(String.valueOf(itemId));
-        consumeReq.setExternalOrderId("ext-compexh-" + uniqueAppid());
+        consumeReq.setExternalOrderId("ext-compexh-" + uniqueTenantid());
         consumeReq.setConsumeNum(5);
-        extractData(runtimeService.postConsumesDirect(appId, consumeReq));
+        extractData(runtimeService.postConsumesDirect(tenantId, consumeReq));
 
         UbmaSubscribe sub = readSubscribe(subId);
         assertThat(sub.getStatus()).isEqualTo("EXHAUSTED");
@@ -355,7 +355,7 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setAdjustNum(10);
         req.setAdjustType("ADD");
 
-        Map<String, Object> data = extractData(tenantService.postCompensations(appId, req));
+        Map<String, Object> data = extractData(tenantService.postCompensations(tenantId, req));
         assertThat(data.get("adjust_type")).isEqualTo("ADD");
 
         UbmaSubscribe updatedSub = readSubscribe(subId);
@@ -364,16 +364,16 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testCompensation_onCanceledSubscription_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Cancel subscription
         PostSubscriptionsCancelRequest cancelReq = new PostSubscriptionsCancelRequest();
         cancelReq.setSubscribeId(subId);
-        cancelReq.setExternalOrderId("ext-compcan-" + uniqueAppid());
-        extractData(runtimeService.postSubscriptionsCancel(appId, cancelReq));
+        cancelReq.setExternalOrderId("ext-compcan-" + uniqueTenantid());
+        extractData(runtimeService.postSubscriptionsCancel(tenantId, cancelReq));
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> items = subscribeItemMapper.selectList(
@@ -388,7 +388,7 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
         req.setAdjustNum(10);
         req.setAdjustType("ADD");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(appId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postCompensations(tenantId, req);
         assertThat(resp.isFail()).isTrue();
     }
 
@@ -396,15 +396,15 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDisableSubscription_activeToDisabled() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         PostSubscriptionsSubscribeIdDisableRequest req = new PostSubscriptionsSubscribeIdDisableRequest();
         req.setReason("违规操作");
 
-        Map<String, Object> data = extractData(tenantService.postSubscriptionsSubscribeIdDisable(appId, subId, req));
+        Map<String, Object> data = extractData(tenantService.postSubscriptionsSubscribeIdDisable(tenantId, subId, req));
         assertThat(data.get("status")).isEqualTo("DISABLED");
 
         UbmaSubscribe sub = readSubscribe(subId);
@@ -413,45 +413,45 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDisableSubscription_exhaustedToDisabled() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 5, 10, 5, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 5, 10, 5, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Consume all to exhaust
         PostConsumesDirectRequest consumeReq = new PostConsumesDirectRequest();
         consumeReq.setUserid("user-001");
         consumeReq.setItemId(String.valueOf(itemId));
-        consumeReq.setExternalOrderId("ext-disexh-" + uniqueAppid());
+        consumeReq.setExternalOrderId("ext-disexh-" + uniqueTenantid());
         consumeReq.setConsumeNum(5);
-        extractData(runtimeService.postConsumesDirect(appId, consumeReq));
+        extractData(runtimeService.postConsumesDirect(tenantId, consumeReq));
 
         PostSubscriptionsSubscribeIdDisableRequest req = new PostSubscriptionsSubscribeIdDisableRequest();
         req.setReason("手动禁用");
 
-        Map<String, Object> data = extractData(tenantService.postSubscriptionsSubscribeIdDisable(appId, subId, req));
+        Map<String, Object> data = extractData(tenantService.postSubscriptionsSubscribeIdDisable(tenantId, subId, req));
         assertThat(data.get("status")).isEqualTo("DISABLED");
     }
 
     @Test
     void testDisableSubscription_withFrozenQuota_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Reserve some quota
         PostConsumesReserveRequest reserveReq = new PostConsumesReserveRequest();
         reserveReq.setUserid("user-001");
         reserveReq.setItemId(String.valueOf(itemId));
-        reserveReq.setExternalOrderId("ext-disfrz-" + uniqueAppid());
+        reserveReq.setExternalOrderId("ext-disfrz-" + uniqueTenantid());
         reserveReq.setConsumeNum(1);
-        extractData(runtimeService.postConsumesReserve(appId, reserveReq));
+        extractData(runtimeService.postConsumesReserve(tenantId, reserveReq));
 
         PostSubscriptionsSubscribeIdDisableRequest req = new PostSubscriptionsSubscribeIdDisableRequest();
         req.setReason("尝试禁用");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postSubscriptionsSubscribeIdDisable(appId, subId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postSubscriptionsSubscribeIdDisable(tenantId, subId, req);
         assertThat(resp.isFail()).isTrue();
 
         UbmaSubscribe sub = readSubscribe(subId);
@@ -460,21 +460,21 @@ public class BenefitTenantServiceIT extends BaseServiceTest {
 
     @Test
     void testDisableSubscription_alreadyCanceled_rejected() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Cancel first
         PostSubscriptionsCancelRequest cancelReq = new PostSubscriptionsCancelRequest();
         cancelReq.setSubscribeId(subId);
-        cancelReq.setExternalOrderId("ext-discan-" + uniqueAppid());
-        extractData(runtimeService.postSubscriptionsCancel(appId, cancelReq));
+        cancelReq.setExternalOrderId("ext-discan-" + uniqueTenantid());
+        extractData(runtimeService.postSubscriptionsCancel(tenantId, cancelReq));
 
         PostSubscriptionsSubscribeIdDisableRequest req = new PostSubscriptionsSubscribeIdDisableRequest();
         req.setReason("尝试禁用已取消");
 
-        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postSubscriptionsSubscribeIdDisable(appId, subId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) tenantService.postSubscriptionsSubscribeIdDisable(tenantId, subId, req);
         assertThat(resp.isFail()).isTrue();
     }
 }

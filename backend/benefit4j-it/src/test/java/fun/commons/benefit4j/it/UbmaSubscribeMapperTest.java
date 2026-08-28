@@ -16,12 +16,12 @@ public class UbmaSubscribeMapperTest extends BaseMapperTest {
     @Autowired
     private UbmaSubscribeMapper mapper;
 
-    private UbmaSubscribe buildSubscribe(Long appId) {
+    private UbmaSubscribe buildSubscribe(Long tenantId) {
         UbmaSubscribe sub = new UbmaSubscribe();
-        sub.setAppId(appId);
+        sub.setTenantId(tenantId);
         sub.setUserid("user-001");
         sub.setSetId(10L);
-        sub.setExternalOrderId("ext-sub-" + uniqueAppid());
+        sub.setExternalOrderId("ext-sub-" + uniqueTenantid());
         sub.setFrozenConsumed(0);
         sub.setTotalConsumed(0);
         sub.setPeriodConsumed(0);
@@ -36,8 +36,8 @@ public class UbmaSubscribeMapperTest extends BaseMapperTest {
 
     @Test
     public void testNewFieldsExternalOrderIdAndFrozenConsumed() {
-        Long appId = createApp().getId();
-        UbmaSubscribe sub = buildSubscribe(appId);
+        Long tenantId = createTenant().getId();
+        UbmaSubscribe sub = buildSubscribe(tenantId);
         sub.setExternalOrderId("ext-sub-order-001");
         sub.setFrozenConsumed(2);
         sub.setPeriodConsumed(3);
@@ -50,8 +50,8 @@ public class UbmaSubscribeMapperTest extends BaseMapperTest {
 
     @Test
     public void testNextRefreshTimeNullable() {
-        Long appId = createApp().getId();
-        UbmaSubscribe sub = buildSubscribe(appId);
+        Long tenantId = createTenant().getId();
+        UbmaSubscribe sub = buildSubscribe(tenantId);
         sub.setNextRefreshTime(null);
 
         mapper.insert(sub);
@@ -61,8 +61,8 @@ public class UbmaSubscribeMapperTest extends BaseMapperTest {
 
     @Test
     public void testOptimisticLockVersion() {
-        Long appId = createApp().getId();
-        UbmaSubscribe sub = buildSubscribe(appId);
+        Long tenantId = createTenant().getId();
+        UbmaSubscribe sub = buildSubscribe(tenantId);
 
         mapper.insert(sub);
 
@@ -96,14 +96,14 @@ public class UbmaSubscribeMapperTest extends BaseMapperTest {
 
     @Test
     public void testExternalOrderIdUniqueConstraint() {
-        Long appId = createApp().getId();
-        String extOrderId = "ext-sub-dup-" + uniqueAppid();
+        Long tenantId = createTenant().getId();
+        String extOrderId = "ext-sub-dup-" + uniqueTenantid();
 
-        UbmaSubscribe sub1 = buildSubscribe(appId);
+        UbmaSubscribe sub1 = buildSubscribe(tenantId);
         sub1.setExternalOrderId(extOrderId);
         mapper.insert(sub1);
 
-        UbmaSubscribe sub2 = buildSubscribe(appId);
+        UbmaSubscribe sub2 = buildSubscribe(tenantId);
         sub2.setExternalOrderId(extOrderId);
 
         assertThatThrownBy(() -> mapper.insert(sub2))

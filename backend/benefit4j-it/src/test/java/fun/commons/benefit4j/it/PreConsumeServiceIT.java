@@ -44,16 +44,16 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     @Autowired
     private UbmxPreConsumeMapper preConsumeMapper;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     /** 预置: 给 user:{uid} 充 amount POINTS */
     private UbmxAccount fund(Long uid, String amount) {
-        postingService.commitTx(cmd("IT-PC-FUND-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-PC-FUND-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", amount)));
         return accountService.getOrCreateAccount(app(), "USER", uid, "POINTS");
     }
@@ -61,7 +61,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     private fun.commons.benefit4j.assets.dto.PostingCommand cmd(String orderId, String txType,
             fun.commons.benefit4j.assets.dto.PostingCommand.LegSpec... legs) {
         fun.commons.benefit4j.assets.dto.PostingCommand c = new fun.commons.benefit4j.assets.dto.PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(java.util.List.of(legs));
@@ -79,7 +79,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
 
     private PreConsumeRequest pre(Long uid, String requestId, String est) {
         PreConsumeRequest r = new PreConsumeRequest();
-        r.setAppId(app());
+        r.setTenantId(app());
         r.setRequestId(requestId);
         r.setAccountRef("user:" + uid);
         r.setAssetCode("POINTS");
@@ -92,7 +92,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
         Long uid = uniqueLongId();
         fund(uid, "100");
 
-        PreConsumeView v = preConsumeService.preConsume(pre(uid, "IT-PC-1-" + uniqueAppid(), "30"));
+        PreConsumeView v = preConsumeService.preConsume(pre(uid, "IT-PC-1-" + uniqueTenantid(), "30"));
 
         assertThat(v.getStatus()).isEqualTo("RESERVED");
         assertThat(v.getExpireTime()).isNotNull();
@@ -105,7 +105,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testPreConsume_idempotentReplay() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String req = "IT-PC-2-" + uniqueAppid();
+        String req = "IT-PC-2-" + uniqueTenantid();
 
         PreConsumeView first = preConsumeService.preConsume(pre(uid, req, "30"));
         PreConsumeView second = preConsumeService.preConsume(pre(uid, req, "30"));
@@ -121,7 +121,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testPreConsume_insufficientRejected() {
         Long uid = uniqueLongId();
         fund(uid, "10");
-        assertThatThrownBy(() -> preConsumeService.preConsume(pre(uid, "IT-PC-3-" + uniqueAppid(), "30")))
+        assertThatThrownBy(() -> preConsumeService.preConsume(pre(uid, "IT-PC-3-" + uniqueTenantid(), "30")))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.INSUFFICIENT_BALANCE);
@@ -131,11 +131,11 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testSettle_diffRefunded() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String req = "IT-PC-4-" + uniqueAppid();
+        String req = "IT-PC-4-" + uniqueTenantid();
         preConsumeService.preConsume(pre(uid, req, "30"));
 
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
+        s.setTenantId(app());
         s.setRequestId(req);
         s.setActual(new BigDecimal("20"));
         PreConsumeView v = preConsumeService.settle(s);
@@ -152,11 +152,11 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testSettle_overEstimate_deductsMore() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String req = "IT-PC-5-" + uniqueAppid();
+        String req = "IT-PC-5-" + uniqueTenantid();
         preConsumeService.preConsume(pre(uid, req, "30"));
 
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
+        s.setTenantId(app());
         s.setRequestId(req);
         s.setActual(new BigDecimal("50"));   // 超预估 20
         preConsumeService.settle(s);
@@ -171,20 +171,20 @@ public class PreConsumeServiceIT extends BaseMapperTest {
         // can_credit=true 专用资产(B7 后 POINTS 不允许授信)
         ensureCreditAsset("CRD_P");
         Long uid = uniqueLongId();
-        postingService.commitTx(cmd("IT-PC-6F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-PC-6F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:CRD_P", "user:" + uid, "CRD_P", "100")));
         UbmxAccount acc = accountService.getOrCreateAccount(app(), "USER", uid, "CRD_P");
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("10"));
         PreConsumeRequest pre = new PreConsumeRequest();
-        pre.setAppId(app());
-        pre.setRequestId("IT-PC-6-" + uniqueAppid());
+        pre.setTenantId(app());
+        pre.setRequestId("IT-PC-6-" + uniqueTenantid());
         pre.setAccountRef("user:" + uid);
         pre.setAssetCode("CRD_P");
         pre.setEstimated(new BigDecimal("30"));
         preConsumeService.preConsume(pre);
         // 可用 = balance 70 + credit 10 = 80;actual=200 → need 170 > 80 → PARTIAL,扣满 80
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
+        s.setTenantId(app());
         s.setRequestId(pre.getRequestId());
         s.setActual(new BigDecimal("200"));
         PreConsumeView v = preConsumeService.settle(s);
@@ -220,11 +220,11 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testSettle_idempotentAndGuarded() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String req = "IT-PC-7-" + uniqueAppid();
+        String req = "IT-PC-7-" + uniqueTenantid();
         preConsumeService.preConsume(pre(uid, req, "30"));
 
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
+        s.setTenantId(app());
         s.setRequestId(req);
         s.setActual(new BigDecimal("30"));
         PreConsumeView first = preConsumeService.settle(s);
@@ -246,7 +246,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testRefund_restoresBalance() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String req = "IT-PC-8-" + uniqueAppid();
+        String req = "IT-PC-8-" + uniqueTenantid();
         preConsumeService.preConsume(pre(uid, req, "30"));
 
         PreConsumeView v = preConsumeService.refund(app(), req);
@@ -261,8 +261,8 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     public void testExpireOnce_releasesExpiredOnly() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String reqExpired = "IT-PC-9E-" + uniqueAppid();
-        String reqAlive = "IT-PC-9A-" + uniqueAppid();
+        String reqExpired = "IT-PC-9E-" + uniqueTenantid();
+        String reqAlive = "IT-PC-9A-" + uniqueTenantid();
         PreConsumeView expired = preConsumeService.preConsume(pre(uid, reqExpired, "30"));
         preConsumeService.preConsume(pre(uid, reqAlive, "20"));
 
@@ -286,7 +286,7 @@ public class PreConsumeServiceIT extends BaseMapperTest {
 
     private SettleRequest settle(String req, String actual) {
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
+        s.setTenantId(app());
         s.setRequestId(req);
         s.setActual(new BigDecimal(actual));
         return s;
@@ -295,8 +295,8 @@ public class PreConsumeServiceIT extends BaseMapperTest {
     @Test
     public void testSettle_unknownRequestRejected() {
         SettleRequest s = new SettleRequest();
-        s.setAppId(app());
-        s.setRequestId("NO-SUCH-" + uniqueAppid());
+        s.setTenantId(app());
+        s.setRequestId("NO-SUCH-" + uniqueTenantid());
         s.setActual(BigDecimal.ONE);
         assertThatThrownBy(() -> preConsumeService.settle(s))
                 .isInstanceOf(AssetsException.class)

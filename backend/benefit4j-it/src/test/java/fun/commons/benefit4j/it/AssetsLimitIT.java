@@ -43,16 +43,16 @@ public class AssetsLimitIT extends BaseMapperTest {
     @Autowired
     private AssetRegistryService registry;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     /** 注册带 limit_policy 的测试资产(每用例独立 code,避免累计串扰) */
     private String assetWithLimit(Map<String, Object> limit) {
-        String code = ("LMT" + uniqueAppid().substring(0, 8)).toUpperCase();
+        String code = ("LMT" + uniqueTenantid().substring(0, 8)).toUpperCase();
         try {
             var a = new UbmxAsset();
             a.setCode(code);
@@ -76,8 +76,8 @@ public class AssetsLimitIT extends BaseMapperTest {
         String asset = assetWithLimit(Map.of("singleMax", "100.00"));
         Long uid = uniqueLongId();
 
-        issue("IT-LMT-1A-" + uniqueAppid(), asset, uid, "100.00");   // 恰好等于上限,放行
-        assertThatThrownBy(() -> issue("IT-LMT-1B-" + uniqueAppid(), asset, uid, "100.01"))
+        issue("IT-LMT-1A-" + uniqueTenantid(), asset, uid, "100.00");   // 恰好等于上限,放行
+        assertThatThrownBy(() -> issue("IT-LMT-1B-" + uniqueTenantid(), asset, uid, "100.01"))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.LIMIT_EXCEEDED);
@@ -88,9 +88,9 @@ public class AssetsLimitIT extends BaseMapperTest {
         String asset = assetWithLimit(Map.of("dailyMax", "200.00"));
         Long uid = uniqueLongId();
 
-        issue("IT-LMT-2A-" + uniqueAppid(), asset, uid, "100.00");
-        issue("IT-LMT-2B-" + uniqueAppid(), asset, uid, "100.00");   // 累计恰 200,放行
-        assertThatThrownBy(() -> issue("IT-LMT-2C-" + uniqueAppid(), asset, uid, "0.01"))
+        issue("IT-LMT-2A-" + uniqueTenantid(), asset, uid, "100.00");
+        issue("IT-LMT-2B-" + uniqueTenantid(), asset, uid, "100.00");   // 累计恰 200,放行
+        assertThatThrownBy(() -> issue("IT-LMT-2C-" + uniqueTenantid(), asset, uid, "0.01"))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.LIMIT_EXCEEDED);
@@ -102,10 +102,10 @@ public class AssetsLimitIT extends BaseMapperTest {
         String asset = assetWithLimit(Map.of("dailyMax", "10000.00", "monthlyMax", "250.00"));
         Long uid = uniqueLongId();
 
-        issue("IT-LMT-3A-" + uniqueAppid(), asset, uid, "100.00");
-        issue("IT-LMT-3B-" + uniqueAppid(), asset, uid, "100.00");
-        issue("IT-LMT-3C-" + uniqueAppid(), asset, uid, "50.00");    // 250 恰好放行
-        assertThatThrownBy(() -> issue("IT-LMT-3D-" + uniqueAppid(), asset, uid, "0.01"))   // 250.01 > 250
+        issue("IT-LMT-3A-" + uniqueTenantid(), asset, uid, "100.00");
+        issue("IT-LMT-3B-" + uniqueTenantid(), asset, uid, "100.00");
+        issue("IT-LMT-3C-" + uniqueTenantid(), asset, uid, "50.00");    // 250 恰好放行
+        assertThatThrownBy(() -> issue("IT-LMT-3D-" + uniqueTenantid(), asset, uid, "0.01"))   // 250.01 > 250
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.LIMIT_EXCEEDED);
@@ -118,14 +118,14 @@ public class AssetsLimitIT extends BaseMapperTest {
                 "singleMax", "10000.00",
                 "out", Map.of("dailyMax", "150.00")));
         Long uid = uniqueLongId();
-        issue("IT-LMT-5F-" + uniqueAppid(), asset, uid, "1000.00");
+        issue("IT-LMT-5F-" + uniqueTenantid(), asset, uid, "1000.00");
 
         // 出账 100 + 50 累计 150 恰好;再 0.01 拒(src 侧日累计)
-        postingService.commitTx(cmd("IT-LMT-5A-" + uniqueAppid(), "CONSUME",
+        postingService.commitTx(cmd("IT-LMT-5A-" + uniqueTenantid(), "CONSUME",
                 leg("user:" + uid, "fee:" + asset, asset, "100.00")));
-        postingService.commitTx(cmd("IT-LMT-5B-" + uniqueAppid(), "CONSUME",
+        postingService.commitTx(cmd("IT-LMT-5B-" + uniqueTenantid(), "CONSUME",
                 leg("user:" + uid, "fee:" + asset, asset, "50.00")));
-        assertThatThrownBy(() -> postingService.commitTx(cmd("IT-LMT-5C-" + uniqueAppid(), "CONSUME",
+        assertThatThrownBy(() -> postingService.commitTx(cmd("IT-LMT-5C-" + uniqueTenantid(), "CONSUME",
                 leg("user:" + uid, "fee:" + asset, asset, "0.01"))))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
@@ -138,11 +138,11 @@ public class AssetsLimitIT extends BaseMapperTest {
                 "singleMax", "10000.00",
                 "out", Map.of("singleMax", "100.00")));
         Long uid = uniqueLongId();
-        issue("IT-LMT-6F-" + uniqueAppid(), asset, uid, "1000.00");   // 入账放行
+        issue("IT-LMT-6F-" + uniqueTenantid(), asset, uid, "1000.00");   // 入账放行
 
         PreConsumeRequest pre = new PreConsumeRequest();
-        pre.setAppId(app());
-        pre.setRequestId("IT-LMT-6-" + uniqueAppid());
+        pre.setTenantId(app());
+        pre.setRequestId("IT-LMT-6-" + uniqueTenantid());
         pre.setAccountRef("user:" + uid);
         pre.setAssetCode(asset);
         pre.setEstimated(new BigDecimal("150.00"));
@@ -156,7 +156,7 @@ public class AssetsLimitIT extends BaseMapperTest {
     public void testNoLimitPolicy_noInterception() {
         // POINTS 种子无 limit_policy,任意金额不拦
         Long uid = uniqueLongId();
-        issue("IT-LMT-7-" + uniqueAppid(), "POINTS", uid, "999999");
+        issue("IT-LMT-7-" + uniqueTenantid(), "POINTS", uid, "999999");
         assertThat(postingService).isNotNull();
     }
 
@@ -164,7 +164,7 @@ public class AssetsLimitIT extends BaseMapperTest {
 
     private PostingCommand cmd(String orderId, String txType, PostingCommand.LegSpec... legs) {
         PostingCommand c = new PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

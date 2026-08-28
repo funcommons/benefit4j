@@ -74,12 +74,12 @@ framework4j:
     exclude-path-patterns: ["/benefit/api/v1/auth/token", "/benefit/api/v1/ops/health", "/swagger-ui/**", "/v3/api-docs/**", "/tracelog", "/tracelog/**"]   # tracelog 控制台静态页放行 (其 API /api/logs/** 仍走 token + OPS 鉴权)
     policies:
       APP:
-        key: [app_id]
+        key: [tenant_id]
         expire-time: 7200
         auto-renew: true
         renew-increment: 1800
       OPS:
-        key: [app_id]
+        key: [tenant_id]
         expire-time: 7200
   signature:
     enabled: true
@@ -135,7 +135,7 @@ framework4j:
     enabled: true             # 压测已恢复
     redis-name: default
     key-prefix: benefit4j:rl
-    default-scope: APP        # 按 App 维度限流 (从 TokenContext 取 app_id)
+    default-scope: APP        # 按 Tenant 维度限流 (从 TokenContext 取 tenant_id)
     default-limit: 100
     default-window: 1m
     default-algorithm: SLIDING_WINDOW
@@ -148,7 +148,7 @@ benefit4j:
       client-id: ${PLATFORM_CLIENT_ID:PLATFORM}
       client-secret: ${PLATFORM_CLIENT_SECRET:fvUQ54yPgrMg2v2X}
   migration:
-    app-secret-encrypt: true   # 临时开启, 迁移完关闭
+    tenant-secret-encrypt: true   # 临时开启, 迁移完关闭
 
 
 

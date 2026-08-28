@@ -8,7 +8,7 @@ import lombok.Data;
 public class PostJobsRefreshCyclesRequest {
     @NotNull
     @OpenId
-    private Long appId;
+    private Long tenantId;
 
     private Boolean dryRun = false;
 }

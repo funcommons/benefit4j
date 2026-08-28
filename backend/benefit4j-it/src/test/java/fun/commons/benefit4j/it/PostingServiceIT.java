@@ -64,11 +64,11 @@ public class PostingServiceIT extends BaseMapperTest {
         }
     }
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     private PostingCommand.LegSpec leg(String src, String dst, String asset, String amount) {
@@ -82,7 +82,7 @@ public class PostingServiceIT extends BaseMapperTest {
 
     private PostingCommand cmd(String orderId, String txType, PostingCommand.LegSpec... legs) {
         PostingCommand c = new PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));
@@ -95,13 +95,13 @@ public class PostingServiceIT extends BaseMapperTest {
 
     private List<UbmxPosting> postingsOf(String orderId) {
         return postingMapper.selectList(new LambdaQueryWrapper<UbmxPosting>()
-                .eq(UbmxPosting::getAppId, app())
+                .eq(UbmxPosting::getTenantId, app())
                 .eq(UbmxPosting::getExtOrderId, orderId));
     }
 
     @Test
     public void testIssueSingleLeg_boundaryNotLockedOrUpdated() {
-        String order = "IT-ISSUE-" + uniqueAppid();
+        String order = "IT-ISSUE-" + uniqueTenantid();
         Long uid = uniqueLongId();
 
         PostingResult r = postingService.commitTx(cmd(order, "ISSUE",
@@ -126,7 +126,7 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testIdempotentReplay_sameResultNoDoublePosting() {
-        String order = "IT-IDEM-" + uniqueAppid();
+        String order = "IT-IDEM-" + uniqueTenantid();
         Long uid = uniqueLongId();
         PostingCommand c = cmd(order, "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "50"));
@@ -143,7 +143,7 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testIdempotencyConflict_sameKeyDifferentPayload() {
-        String order = "IT-CONF-" + uniqueAppid();
+        String order = "IT-CONF-" + uniqueTenantid();
         Long uid = uniqueLongId();
         postingService.commitTx(cmd(order, "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "10")));
@@ -159,8 +159,8 @@ public class PostingServiceIT extends BaseMapperTest {
     @Test
     public void testMultiLegConsume_atomic() {
         ensureAsset("CNY_T");
-        String order1 = "IT-CHG-" + uniqueAppid();
-        String order2 = "IT-PAY-" + uniqueAppid();
+        String order1 = "IT-CHG-" + uniqueTenantid();
+        String order2 = "IT-PAY-" + uniqueTenantid();
         Long uid = uniqueLongId();
         Long mid = uniqueLongId();
 
@@ -186,8 +186,8 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testInsufficientBalance_allOrNothing() {
-        String order1 = "IT-FILL-" + uniqueAppid();
-        String order2 = "IT-FAIL-" + uniqueAppid();
+        String order1 = "IT-FILL-" + uniqueTenantid();
+        String order2 = "IT-FAIL-" + uniqueTenantid();
         Long uid = uniqueLongId();
         postingService.commitTx(cmd(order1, "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "10")));
@@ -209,7 +209,7 @@ public class PostingServiceIT extends BaseMapperTest {
     public void testCreditLimitExtendsFloor() {
         ensureAssetWithCredit();   // can_credit=true 专用资产
         String asset = "CRD_T";
-        String order = "IT-CRED-" + uniqueAppid();
+        String order = "IT-CRED-" + uniqueTenantid();
         Long uid = uniqueLongId();
         UbmxAccount acc = accountService.getOrCreateAccount(app(), "USER", uid, asset);
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("10"));
@@ -240,7 +240,7 @@ public class PostingServiceIT extends BaseMapperTest {
 
     @Test
     public void testVersionIncrementsAsAudit() {
-        String order = "IT-VER-" + uniqueAppid();
+        String order = "IT-VER-" + uniqueTenantid();
         Long uid = uniqueLongId();
         postingService.commitTx(cmd(order, "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "1")));
@@ -257,7 +257,7 @@ public class PostingServiceIT extends BaseMapperTest {
         ensureAsset("TRN_T");
         Long a = uniqueLongId();
         Long b = uniqueLongId();
-        postingService.commitTx(cmd("IT-DL-PREP-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-DL-PREP-" + uniqueTenantid(), "ISSUE",
                 leg("issue:TRN_T", "user:" + a, "TRN_T", "100"),
                 leg("issue:TRN_T", "user:" + b, "TRN_T", "100")));
 
@@ -282,7 +282,7 @@ public class PostingServiceIT extends BaseMapperTest {
 
     private void transferLoop(int rounds, Long from, Long to, AtomicInteger ok) {
         for (int i = 0; i < rounds; i++) {
-            postingService.commitTx(cmd("IT-DL-" + from + "-" + i + "-" + uniqueAppid(), "TRANSFER",
+            postingService.commitTx(cmd("IT-DL-" + from + "-" + i + "-" + uniqueTenantid(), "TRANSFER",
                     leg("user:" + from, "user:" + to, "TRN_T", "1")));
             ok.incrementAndGet();
         }

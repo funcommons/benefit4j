@@ -1,20 +1,20 @@
 package fun.commons.benefit4j.client;
 
 public interface BenefitPlatformClient {
-    // 颁发新租户(开通 AppId、AK、SK)
-    Object postApplications(@org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostApplicationsRequest req);
+    // 颁发新租户(开通 TenantId、AK、SK)
+    Object postTenants(@org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostTenantsRequest req);
 
     // 全局租户管控列表查询
-    Object getApplications();
+    Object getTenants();
 
     // 修改租户基础信息或封禁租户
-    Object putApplicationsAppId(@org.springframework.web.bind.annotation.PathVariable("app_id") Long appId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutApplicationsAppIdRequest req);
+    Object putTenantsTenantId(@org.springframework.web.bind.annotation.PathVariable("tenant_id") Long tenantId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutTenantsTenantIdRequest req);
 
     // 重置应用密钥 (返回新明文密钥, 仅出现一次)
-    Object postApplicationsAppIdSecret(@org.springframework.web.bind.annotation.PathVariable("app_id") Long appId);
+    Object postTenantsTenantIdSecret(@org.springframework.web.bind.annotation.PathVariable("tenant_id") Long tenantId);
 
     // 揭示应用密钥明文 (仅在用户主动点击查看时调用)
-    Object getApplicationsAppIdSecret(@org.springframework.web.bind.annotation.PathVariable("app_id") Long appId);
+    Object getTenantsTenantIdSecret(@org.springframework.web.bind.annotation.PathVariable("tenant_id") Long tenantId);
 
     // 沉淀并发布系统全局通用权益模板
     Object postGlobalTemplates(@org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostGlobalTemplatesRequest req);
@@ -32,7 +32,7 @@ public interface BenefitPlatformClient {
     Object getStatisticsLiabilities();
 
     // 平台权益项总览 (跨租户, 含 quota/used/usage_pct), 多条件分页只读
-    Object getPlatformItems(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object getPlatformItems(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                             @org.springframework.web.bind.annotation.RequestParam(value = "status", required = false) String status,
                             @org.springframework.web.bind.annotation.RequestParam(value = "keyword", required = false) String keyword,
                             @org.springframework.web.bind.annotation.RequestParam(value = "created_at_start", required = false) java.time.OffsetDateTime createdAtStart,
@@ -41,7 +41,7 @@ public interface BenefitPlatformClient {
                             @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "20") Integer size);
 
     // 平台权益包总览 (跨租户聚合 ubma_benefit_set), 多条件分页只读
-    Object getPlatformBenefitSets(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object getPlatformBenefitSets(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                                   @org.springframework.web.bind.annotation.RequestParam(value = "status", required = false) String status,
                                   @org.springframework.web.bind.annotation.RequestParam(value = "keyword", required = false) String keyword,
                                   @org.springframework.web.bind.annotation.RequestParam(value = "priority_min", required = false) Integer priorityMin,
@@ -61,7 +61,7 @@ public interface BenefitPlatformClient {
     Object deleteItemTemplatesItemId(@org.springframework.web.bind.annotation.PathVariable("item_id") Long itemId);
 
     // 跨租户多条件分页查询订阅
-    Object getPlatformSubscriptions(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object getPlatformSubscriptions(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                                     @org.springframework.web.bind.annotation.RequestParam(value = "userid", required = false) String userid,
                                     @org.springframework.web.bind.annotation.RequestParam(value = "set_id", required = false) String setId,
                                     @org.springframework.web.bind.annotation.RequestParam(value = "status", required = false) String status,
@@ -75,12 +75,12 @@ public interface BenefitPlatformClient {
                                     @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "20") Integer size);
 
     // 跨租户列出指定订阅下的多源额度桶 (V1.2.0)
-    Object getPlatformSubscriptionsSubscribeIdItems(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object getPlatformSubscriptionsSubscribeIdItems(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                                                     @org.springframework.web.bind.annotation.PathVariable("subscribe_id") String subscribeId,
                                                     @org.springframework.web.bind.annotation.RequestParam(value = "item_id", required = false) String itemId);
 
     // 跨租户多条件分页查询扣减流水
-    Object getPlatformConsumes(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object getPlatformConsumes(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                                @org.springframework.web.bind.annotation.RequestParam(value = "userid", required = false) String userid,
                                @org.springframework.web.bind.annotation.RequestParam(value = "subs_item_id", required = false) String subsItemId,
                                @org.springframework.web.bind.annotation.RequestParam(value = "item_id", required = false) String itemId,
@@ -95,7 +95,7 @@ public interface BenefitPlatformClient {
                                @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "20") Integer size);
 
     // 跨租户手动退减扣减流水
-    Object postPlatformConsumesIdRefund(@org.springframework.web.bind.annotation.RequestParam(value = "app_id", required = false) Long appId,
+    Object postPlatformConsumesIdRefund(@org.springframework.web.bind.annotation.RequestParam(value = "tenant_id", required = false) Long tenantId,
                                         @org.springframework.web.bind.annotation.PathVariable("consume_id") String consumeId,
                                         @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req);
 

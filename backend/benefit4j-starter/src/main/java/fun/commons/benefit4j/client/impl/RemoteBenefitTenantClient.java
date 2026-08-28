@@ -19,87 +19,87 @@ public class RemoteBenefitTenantClient extends AbstractRemoteBenefitClient imple
     }
 
     @Override
-    public Object postBenefitItems(Long appId, PostBenefitItemsRequest req) {
-        return invoke("/benefit/api/v1/tenant/benefit-items", "POST", appId, req);
+    public Object postBenefitItems(Long tenantId, PostBenefitItemsRequest req) {
+        return invoke("/benefit/api/v1/tenant/benefit-items", "POST", tenantId, req);
     }
 
     @Override
-    public Object getBenefitItems(Long appId) {
-        return invoke("/benefit/api/v1/tenant/benefit-items", "GET", appId, null);
+    public Object getBenefitItems(Long tenantId) {
+        return invoke("/benefit/api/v1/tenant/benefit-items", "GET", tenantId, null);
     }
 
     @Override
-    public Object getBenefitItemsItemId(Long appId, String itemId) {
-        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "GET", appId, null);
+    public Object getBenefitItemsItemId(Long tenantId, String itemId) {
+        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "GET", tenantId, null);
     }
 
     @Override
-    public Object putBenefitItemsItemId(Long appId, String itemId, PutBenefitItemsItemIdRequest req) {
-        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "PUT", appId, req);
+    public Object putBenefitItemsItemId(Long tenantId, String itemId, PutBenefitItemsItemIdRequest req) {
+        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "PUT", tenantId, req);
     }
 
     @Override
-    public Object deleteBenefitItemsItemId(Long appId, String itemId) {
-        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "DELETE", appId, null);
+    public Object deleteBenefitItemsItemId(Long tenantId, String itemId) {
+        return invoke("/benefit/api/v1/tenant/benefit-items/" + itemId, "DELETE", tenantId, null);
     }
 
     @Override
-    public Object getBenefitTemplates(Long appId) {
-        return invoke("/benefit/api/v1/tenant/benefit-templates", "GET", appId, null);
+    public Object getBenefitTemplates(Long tenantId) {
+        return invoke("/benefit/api/v1/tenant/benefit-templates", "GET", tenantId, null);
     }
 
     @Override
-    public Object postBenefitSets(Long appId, PostBenefitSetsRequest req) {
-        return invoke("/benefit/api/v1/tenant/benefit-sets", "POST", appId, req);
+    public Object postBenefitSets(Long tenantId, PostBenefitSetsRequest req) {
+        return invoke("/benefit/api/v1/tenant/benefit-sets", "POST", tenantId, req);
     }
 
     @Override
-    public Object getBenefitSets(Long appId) {
-        return invoke("/benefit/api/v1/tenant/benefit-sets", "GET", appId, null);
+    public Object getBenefitSets(Long tenantId) {
+        return invoke("/benefit/api/v1/tenant/benefit-sets", "GET", tenantId, null);
     }
 
     @Override
-    public Object getBenefitSetsSetId(Long appId, String setId) {
-        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "GET", appId, null);
+    public Object getBenefitSetsSetId(Long tenantId, String setId) {
+        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "GET", tenantId, null);
     }
 
     @Override
-    public Object putBenefitSetsSetId(Long appId, String setId, PutBenefitSetsSetIdRequest req) {
-        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "PUT", appId, req);
+    public Object putBenefitSetsSetId(Long tenantId, String setId, PutBenefitSetsSetIdRequest req) {
+        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "PUT", tenantId, req);
     }
 
     @Override
-    public Object deleteBenefitSetsSetId(Long appId, String setId) {
-        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "DELETE", appId, null);
+    public Object deleteBenefitSetsSetId(Long tenantId, String setId) {
+        return invoke("/benefit/api/v1/tenant/benefit-sets/" + setId, "DELETE", tenantId, null);
     }
 
     @Override
-    public Object getUsersUseridAssets(Long appId, String userid) {
-        return invoke("/benefit/api/v1/tenant/users/" + userid + "/assets", "GET", appId, null);
+    public Object getUsersUseridAssets(Long tenantId, String userid) {
+        return invoke("/benefit/api/v1/tenant/users/" + userid + "/assets", "GET", tenantId, null);
     }
 
     @Override
-    public Object getUsersUseridConsumes(Long appId, String userid) {
-        return invoke("/benefit/api/v1/tenant/users/" + userid + "/consumes", "GET", appId, null);
+    public Object getUsersUseridConsumes(Long tenantId, String userid) {
+        return invoke("/benefit/api/v1/tenant/users/" + userid + "/consumes", "GET", tenantId, null);
     }
 
     @Override
-    public Object postSubscriptions(Long appId, PostSubscriptionsRequest req) {
-        return invoke("/benefit/api/v1/tenant/subscriptions", "POST", appId, req);
+    public Object postSubscriptions(Long tenantId, PostSubscriptionsRequest req) {
+        return invoke("/benefit/api/v1/tenant/subscriptions", "POST", tenantId, req);
     }
 
     @Override
-    public Object postSubscriptionsSubscribeIdDisable(Long appId, String subscribeId, PostSubscriptionsSubscribeIdDisableRequest req) {
-        return invoke("/benefit/api/v1/tenant/subscriptions/" + subscribeId + "/disable", "POST", appId, req);
+    public Object postSubscriptionsSubscribeIdDisable(Long tenantId, String subscribeId, PostSubscriptionsSubscribeIdDisableRequest req) {
+        return invoke("/benefit/api/v1/tenant/subscriptions/" + subscribeId + "/disable", "POST", tenantId, req);
     }
 
     @Override
-    public Object postCompensations(Long appId, PostCompensationsRequest req) {
-        return invoke("/benefit/api/v1/tenant/compensations", "POST", appId, req);
+    public Object postCompensations(Long tenantId, PostCompensationsRequest req) {
+        return invoke("/benefit/api/v1/tenant/compensations", "POST", tenantId, req);
     }
 
     @Override
-    public Object getSubscriptions(Long appId, String userid, String setId, String status,
+    public Object getSubscriptions(Long tenantId, String userid, String setId, String status,
                                    String externalOrderId, String keyword,
                                    OffsetDateTime dateBeginStart, OffsetDateTime dateBeginEnd,
                                    OffsetDateTime createdAtStart, OffsetDateTime createdAtEnd,
@@ -110,18 +110,18 @@ public class RemoteBenefitTenantClient extends AbstractRemoteBenefitClient imple
         q.put("date_begin_start", toStr(dateBeginStart)); q.put("date_begin_end", toStr(dateBeginEnd));
         q.put("created_at_start", toStr(createdAtStart)); q.put("created_at_end", toStr(createdAtEnd));
         q.put("page", toStr(page)); q.put("size", toStr(size));
-        return invoke("/benefit/api/v1/tenant/subscriptions", "GET", appId, null, q);
+        return invoke("/benefit/api/v1/tenant/subscriptions", "GET", tenantId, null, q);
     }
 
     @Override
-    public Object getSubscriptionsSubscribeIdItems(Long appId, String subscribeId, String itemId) {
+    public Object getSubscriptionsSubscribeIdItems(Long tenantId, String subscribeId, String itemId) {
         Map<String, String> q = new LinkedHashMap<>();
         q.put("item_id", itemId);
-        return invoke("/benefit/api/v1/tenant/subscriptions/" + subscribeId + "/items", "GET", appId, null, q);
+        return invoke("/benefit/api/v1/tenant/subscriptions/" + subscribeId + "/items", "GET", tenantId, null, q);
     }
 
     @Override
-    public Object getConsumes(Long appId, String userid, String subsItemId, String itemId, String status,
+    public Object getConsumes(Long tenantId, String userid, String subsItemId, String itemId, String status,
                               String externalOrderId, String keyword, Integer consumeNumMin, Integer consumeNumMax,
                               OffsetDateTime consumeTimeStart, OffsetDateTime consumeTimeEnd,
                               Integer page, Integer size) {
@@ -131,12 +131,12 @@ public class RemoteBenefitTenantClient extends AbstractRemoteBenefitClient imple
         q.put("consume_num_min", toStr(consumeNumMin)); q.put("consume_num_max", toStr(consumeNumMax));
         q.put("consume_time_start", toStr(consumeTimeStart)); q.put("consume_time_end", toStr(consumeTimeEnd));
         q.put("page", toStr(page)); q.put("size", toStr(size));
-        return invoke("/benefit/api/v1/tenant/consumes", "GET", appId, null, q);
+        return invoke("/benefit/api/v1/tenant/consumes", "GET", tenantId, null, q);
     }
 
     @Override
-    public Object postConsumesIdRefund(Long appId, String consumeId, PostConsumesIdRefundRequest req) {
-        return invoke("/benefit/api/v1/tenant/consumes/" + consumeId + "/refund", "POST", appId, req);
+    public Object postConsumesIdRefund(Long tenantId, String consumeId, PostConsumesIdRefundRequest req) {
+        return invoke("/benefit/api/v1/tenant/consumes/" + consumeId + "/refund", "POST", tenantId, req);
     }
 
     private static String toStr(Object o) {

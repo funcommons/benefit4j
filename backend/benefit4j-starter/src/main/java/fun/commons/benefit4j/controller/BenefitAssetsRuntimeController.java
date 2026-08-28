@@ -31,7 +31,7 @@ import java.util.Map;
 /**
  * assets 域 runtime API(assets-design §4.2/§4.3/§4.4/§4.5):
  * 对外记账入口(issue/三阶段)+ 账户/流水查询。
- * 安全: appId 一律取 TokenContext,body 携带的 appId 被忽略(多租户隔离不可伪造)。
+ * 安全: tenantId 一律取 TokenContext,body 携带的 tenantId 被忽略(多租户隔离不可伪造)。
  */
 @RestController
 @RequestMapping("/benefit/api/v1/assets")
@@ -53,7 +53,7 @@ public class BenefitAssetsRuntimeController {
     @Auditable(action = "ASSETS_ISSUE", targetType = "tx_order", targetIdSpel = "#req.extOrderId")
     public ApiResponse<Map<String, Object>> postIssue(@Valid @RequestBody PostIssueRequest req) {
         PostingCommand cmd = new PostingCommand();
-        cmd.setAppId(appId());
+        cmd.setTenantId(tenantId());
         cmd.setExtOrderId(req.getExtOrderId());
         cmd.setTxType(req.getTxType() == null ? "ISSUE" : req.getTxType());
         cmd.setExt(req.getExt());
@@ -76,7 +76,7 @@ public class BenefitAssetsRuntimeController {
     @RateLimit(limit = 100, window = "1m", scope = "APP")
     @Auditable(action = "ASSETS_PRECONSUME", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postPreConsume(@Valid @RequestBody PreConsumeRequest req) {
-        req.setAppId(appId());   // token 覆盖 body
+        req.setTenantId(tenantId());   // token 覆盖 body
         return ApiResponse.success(preConsumeService.preConsume(req));
     }
 
@@ -86,7 +86,7 @@ public class BenefitAssetsRuntimeController {
     @Auditable(action = "ASSETS_PRECONSUME_DUAL", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postPreConsumeDual(
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.PreConsumeDualRequest req) {
-        req.setAppId(appId());
+        req.setTenantId(tenantId());
         return ApiResponse.success(preConsumeService.preConsumeDual(req));
     }
 
@@ -96,7 +96,7 @@ public class BenefitAssetsRuntimeController {
     @Auditable(action = "ASSETS_FREEZE", targetType = "freeze", targetIdSpel = "#req.freezeNo")
     public ApiResponse<Object> postFreeze(
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.FreezeRequest req) {
-        req.setAppId(appId());
+        req.setTenantId(tenantId());
         return ApiResponse.success(freezeService.freeze(req));
     }
 
@@ -106,7 +106,7 @@ public class BenefitAssetsRuntimeController {
     @Auditable(action = "ASSETS_UNFREEZE", targetType = "freeze", targetIdSpel = "#req.freezeNo")
     public ApiResponse<Object> postUnfreeze(
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.UnfreezeRequest req) {
-        req.setAppId(appId());
+        req.setTenantId(tenantId());
         return ApiResponse.success(freezeService.unfreeze(req));
     }
 
@@ -116,7 +116,7 @@ public class BenefitAssetsRuntimeController {
     @Auditable(action = "ASSETS_EXCHANGE", targetType = "tx_order", targetIdSpel = "#req.orderId")
     public ApiResponse<Object> postExchange(
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.ExchangeRequest req) {
-        req.setAppId(appId());
+        req.setTenantId(tenantId());
         return ApiResponse.success(exchangeService.exchange(req));
     }
 
@@ -127,7 +127,7 @@ public class BenefitAssetsRuntimeController {
     public ApiResponse<Map<String, Object>> postRepay(
             @Valid @RequestBody fun.commons.benefit4j.assets.dto.RepayRequest req) {
         PostingCommand cmd = new PostingCommand();
-        cmd.setAppId(appId());
+        cmd.setTenantId(tenantId());
         cmd.setExtOrderId(req.getRequestId());
         cmd.setTxType("REPAY");
         PostingCommand.LegSpec l = new PostingCommand.LegSpec();
@@ -146,7 +146,7 @@ public class BenefitAssetsRuntimeController {
     @RateLimit(limit = 100, window = "1m", scope = "APP")
     @Auditable(action = "ASSETS_SETTLE", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postSettle(@Valid @RequestBody SettleRequest req) {
-        req.setAppId(appId());
+        req.setTenantId(tenantId());
         return ApiResponse.success(preConsumeService.settle(req));
     }
 
@@ -155,7 +155,7 @@ public class BenefitAssetsRuntimeController {
     @RateLimit(limit = 100, window = "1m", scope = "APP")
     @Auditable(action = "ASSETS_REFUND", targetType = "pre_consume", targetIdSpel = "#req.requestId")
     public ApiResponse<Object> postRefund(@Valid @RequestBody RefundRequest req) {
-        return ApiResponse.success(preConsumeService.refund(appId(), req.getRequestId()));
+        return ApiResponse.success(preConsumeService.refund(tenantId(), req.getRequestId()));
     }
 
     /** 主体名下所有资产账户(§4.2) */
@@ -164,7 +164,7 @@ public class BenefitAssetsRuntimeController {
     public ApiResponse<List<UbmxAccount>> getAccounts(
             @RequestParam("owner_type") String ownerType,
             @RequestParam("owner_id") Long ownerId) {
-        return ApiResponse.success(queryService.listAccounts(appId(), ownerType, ownerId, null));
+        return ApiResponse.success(queryService.listAccounts(tenantId(), ownerType, ownerId, null));
     }
 
     /** 账户流水分页(§4.5,按账户引用 + 资产) */
@@ -175,11 +175,11 @@ public class BenefitAssetsRuntimeController {
             @RequestParam("asset_code") String assetCode,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
-        UbmxAccount acc = accountService.findRef(appId(), accountRef, assetCode);
+        UbmxAccount acc = accountService.findRef(tenantId(), accountRef, assetCode);
         if (acc == null) {
             return ApiResponse.success(List.of());   // 只读解析: 不存在不开户,直接空
         }
-        var rows = queryService.listPostings(appId(), acc.getId(), page, size);
+        var rows = queryService.listPostings(tenantId(), acc.getId(), page, size);
         List<Map<String, Object>> out = new java.util.ArrayList<>();
         for (var p : rows) {
             Map<String, Object> m = new java.util.LinkedHashMap<>();
@@ -200,8 +200,8 @@ public class BenefitAssetsRuntimeController {
         return ApiResponse.success(out);
     }
 
-    private Long appId() {
-        Object claim = TokenContext.getClaim("app_id");
+    private Long tenantId() {
+        Object claim = TokenContext.getClaim("tenant_id");
         if (claim == null) return null;
         if (claim instanceof Long l) return l;
         if (claim instanceof Number n) return n.longValue();

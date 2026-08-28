@@ -6,12 +6,12 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** issue/记账 API 请求(§4.3.1 leg 模板)。appId 以 TokenContext 为准,body 传入将被忽略 */
+/** issue/记账 API 请求(§4.3.1 leg 模板)。tenantId 以 TokenContext 为准,body 传入将被忽略 */
 @Getter
 @Setter
 public class PostIssueRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 调用方幂等键(issueOrderId) */
     private String extOrderId;

@@ -40,38 +40,38 @@ public class AccountService {
 
     /** 主体户 lazy 开户: 不存在则建(单语句幂等,并发下撞唯一键重读) */
     @Transactional
-    public UbmxAccount getOrCreateAccount(Long appId, String ownerType, Long ownerId, String assetCode) {
+    public UbmxAccount getOrCreateAccount(Long tenantId, String ownerType, Long ownerId, String assetCode) {
         registry.getActiveRequired(assetCode);
-        UbmxAccount existing = selectByUniqueKey(appId, ownerType, ownerId, assetCode);
+        UbmxAccount existing = selectByUniqueKey(tenantId, ownerType, ownerId, assetCode);
         if (existing != null) return existing;
 
-        UbmxAccount acc = baseAccount(appId, ownerType, ownerId, assetCode);
+        UbmxAccount acc = baseAccount(tenantId, ownerType, ownerId, assetCode);
         acc.setAccountType("NORMAL");
         acc.setId(com.baomidou.mybatisplus.core.toolkit.IdWorker.getId());
         // PG: 事务内撞唯一键会 abort 整个事务,必须 ON CONFLICT DO NOTHING 判行数
         if (accountMapper.insertIgnore(acc, null) == 0) {
-            return selectByUniqueKey(appId, ownerType, ownerId, assetCode);
+            return selectByUniqueKey(tenantId, ownerType, ownerId, assetCode);
         }
         return acc;
     }
 
     /** 边界户 lazy 开户: issue:{asset} / fee:{asset} / world:{channel} 等 */
     @Transactional
-    public UbmxAccount getOrCreateBoundaryAccount(Long appId, String boundaryRef, String assetCode) {
+    public UbmxAccount getOrCreateBoundaryAccount(Long tenantId, String boundaryRef, String assetCode) {
         registry.getActiveRequired(assetCode);
         String kind = boundaryRef.startsWith("world:") ? boundaryRef : boundaryRef.split(":")[0];
         long ownerId = boundaryOwnerIdOf(boundaryRef.contains(":") && kind.equals(boundaryRef)
                 ? boundaryRef : kind);
-        UbmxAccount existing = selectByUniqueKey(appId, "PLATFORM", ownerId, assetCode);
+        UbmxAccount existing = selectByUniqueKey(tenantId, "PLATFORM", ownerId, assetCode);
         if (existing != null) return existing;
 
-        UbmxAccount acc = baseAccount(appId, "PLATFORM", ownerId, assetCode);
+        UbmxAccount acc = baseAccount(tenantId, "PLATFORM", ownerId, assetCode);
         acc.setAccountType("BOUNDARY");
         acc.setExt(Map.of("boundary", kind));
         acc.setId(com.baomidou.mybatisplus.core.toolkit.IdWorker.getId());
         String extJson = "{\"boundary\":\"" + kind + "\"}";
         if (accountMapper.insertIgnore(acc, extJson) == 0) {
-            return selectByUniqueKey(appId, "PLATFORM", ownerId, assetCode);
+            return selectByUniqueKey(tenantId, "PLATFORM", ownerId, assetCode);
         }
         return acc;
     }
@@ -88,7 +88,7 @@ public class AccountService {
      * 授信额度调整(F1,OPS 调额入口;双签审计为后续项,当前 OPS token + @Auditable)。
      * 能力位强校验: 资产未开放 can_credit 不得授信。
      */
-    public void updateCreditLimit(Long appId, Long accountId, BigDecimal creditLimit) {
+    public void updateCreditLimit(Long tenantId, Long accountId, BigDecimal creditLimit) {
         if (creditLimit == null || creditLimit.signum() < 0) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "授信额度不可为负");
         }
@@ -105,7 +105,7 @@ public class AccountService {
     }
 
     /** 只读解析(查询 API 用): 不 lazy 开户,不存在返回 null,杜绝查询写副作用 */
-    public UbmxAccount findRef(Long appId, String ref, String assetCode) {
+    public UbmxAccount findRef(Long tenantId, String ref, String assetCode) {
         int colon = ref.indexOf(':');
         if (colon < 0) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
@@ -120,13 +120,13 @@ public class AccountService {
         if ("issue".equals(head) || "fee".equals(head) || "exchange".equals(head)
                 || "credit".equals(head) || "world".equals(head)) {
             String kind = head.equals("world") ? ref : head;
-            return selectByUniqueKey(appId, "PLATFORM", boundaryOwnerIdOf(kind), assetCode);
+            return selectByUniqueKey(tenantId, "PLATFORM", boundaryOwnerIdOf(kind), assetCode);
         }
-        return selectByUniqueKey(appId, head.toUpperCase(), ownerId, assetCode);
+        return selectByUniqueKey(tenantId, head.toUpperCase(), ownerId, assetCode);
     }
 
     /** 引擎解析腿时调用;独立调用(非事务)自开事务 */
-    public UbmxAccount resolveRef(Long appId, String ref, String assetCode) {
+    public UbmxAccount resolveRef(Long tenantId, String ref, String assetCode) {
         int colon = ref.indexOf(':');
         if (colon < 0) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
@@ -144,31 +144,31 @@ public class AccountService {
                 } catch (NumberFormatException e) {
                     throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
                 }
-                return getOrCreateAccount(appId, head.toUpperCase(), ownerId, assetCode);
+                return getOrCreateAccount(tenantId, head.toUpperCase(), ownerId, assetCode);
             }
             case "issue":
             case "fee":
             case "exchange":
             case "credit":
-                return getOrCreateBoundaryAccount(appId, ref, assetCode);
+                return getOrCreateBoundaryAccount(tenantId, ref, assetCode);
             case "world":
-                return getOrCreateBoundaryAccount(appId, ref, assetCode);
+                return getOrCreateBoundaryAccount(tenantId, ref, assetCode);
             default:
                 throw new AssetsException(AssetsException.ASSET_INVALID, "非法账户引用: " + ref);
         }
     }
 
-    private UbmxAccount selectByUniqueKey(Long appId, String ownerType, Long ownerId, String assetCode) {
+    private UbmxAccount selectByUniqueKey(Long tenantId, String ownerType, Long ownerId, String assetCode) {
         return accountMapper.selectOne(new LambdaQueryWrapper<UbmxAccount>()
-                .eq(UbmxAccount::getAppId, appId)
+                .eq(UbmxAccount::getTenantId, tenantId)
                 .eq(UbmxAccount::getOwnerType, ownerType)
                 .eq(UbmxAccount::getOwnerId, ownerId)
                 .eq(UbmxAccount::getAssetCode, assetCode));
     }
 
-    private UbmxAccount baseAccount(Long appId, String ownerType, Long ownerId, String assetCode) {
+    private UbmxAccount baseAccount(Long tenantId, String ownerType, Long ownerId, String assetCode) {
         UbmxAccount acc = new UbmxAccount();
-        acc.setAppId(appId);
+        acc.setTenantId(tenantId);
         acc.setOwnerType(ownerType);
         acc.setOwnerId(ownerId);
         acc.setAssetCode(assetCode);

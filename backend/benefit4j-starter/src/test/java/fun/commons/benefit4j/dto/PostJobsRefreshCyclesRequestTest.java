@@ -14,9 +14,9 @@ public class PostJobsRefreshCyclesRequestTest {
     @Test
     public void testGetterSetter() {
         PostJobsRefreshCyclesRequest req = new PostJobsRefreshCyclesRequest();
-        req.setAppId(12345L);
+        req.setTenantId(12345L);
         req.setDryRun(true);
-        assertThat(req.getAppId()).isEqualTo(12345L);
+        assertThat(req.getTenantId()).isEqualTo(12345L);
         assertThat(req.getDryRun()).isTrue();
     }
 }

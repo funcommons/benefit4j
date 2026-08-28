@@ -30,23 +30,23 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
 
     @Test
     void testMultiSourceBucketConsume_drainsByPriority() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
         // 高优先级 set (priority=20) — 月度桶
-        Long monthlySetId = createBenefitSet(appId, 10000, 20, 10000, itemId).getId();
+        Long monthlySetId = createBenefitSet(tenantId, 10000, 20, 10000, itemId).getId();
         // 低优先级 set (priority=10) — 充值桶
-        Long topUpSetId = createBenefitSet(appId, 50000, 10, 50000, itemId).getId();
+        Long topUpSetId = createBenefitSet(tenantId, 50000, 10, 50000, itemId).getId();
 
-        String subId1 = createSubscription(appId, "user-001", monthlySetId);
-        String subId2 = createSubscription(appId, "user-001", topUpSetId);
+        String subId1 = createSubscription(tenantId, "user-001", monthlySetId);
+        String subId2 = createSubscription(tenantId, "user-001", topUpSetId);
 
         // 请求扣 12000: 月度桶先扣 (priority=20 > 10), 月度耗尽 10000 + 充值桶扣 2000
         PostConsumesDirectRequest req = new PostConsumesDirectRequest();
         req.setUserid("user-001");
         req.setItemId(String.valueOf(itemId));
-        req.setExternalOrderId("ext-multisrc-" + uniqueAppid());
+        req.setExternalOrderId("ext-multisrc-" + uniqueTenantid());
         req.setConsumeNum(12000);
-        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(appId, req));
+        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(tenantId, req));
         assertThat(data.get("consume_num")).isEqualTo(12000);
 
         // 月度桶耗尽
@@ -71,13 +71,13 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
 
     @Test
     void testExpiredBucketSkipped() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long monthlySetId = createBenefitSet(appId, 10000, 20, 10000, itemId).getId();
-        Long topUpSetId = createBenefitSet(appId, 50000, 10, 50000, itemId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long monthlySetId = createBenefitSet(tenantId, 10000, 20, 10000, itemId).getId();
+        Long topUpSetId = createBenefitSet(tenantId, 50000, 10, 50000, itemId).getId();
 
-        String subId1 = createSubscription(appId, "user-001", monthlySetId);
-        String subId2 = createSubscription(appId, "user-001", topUpSetId);
+        String subId1 = createSubscription(tenantId, "user-001", monthlySetId);
+        String subId2 = createSubscription(tenantId, "user-001", topUpSetId);
 
         // 把月度桶 expires_at 设为过去
         UbmaSubscribe sub1 = readSubscribe(subId1);
@@ -94,9 +94,9 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
         PostConsumesDirectRequest req = new PostConsumesDirectRequest();
         req.setUserid("user-001");
         req.setItemId(String.valueOf(itemId));
-        req.setExternalOrderId("ext-exp-" + uniqueAppid());
+        req.setExternalOrderId("ext-exp-" + uniqueTenantid());
         req.setConsumeNum(5000);
-        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(appId, req));
+        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(tenantId, req));
         assertThat(data.get("consume_num")).isEqualTo(5000);
 
         // 月度桶未扣
@@ -110,10 +110,10 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
 
     @Test
     void testCompensationAdd_createsNewBucket_withPriority() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 10000, 10, 10000, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 10000, 10, 10000, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         UbmaSubscribe sub = readSubscribe(subId);
         List<UbmaSubscribeItem> originalBuckets = subscribeItemMapper.selectList(
@@ -130,7 +130,7 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
         req.setSourceType("TOPUP");
         req.setPriority(5);
         // 不设 expiresAt = 永不过期
-        Map<String, Object> data = extractData(tenantService.postCompensations(appId, req));
+        Map<String, Object> data = extractData(tenantService.postCompensations(tenantId, req));
         assertThat(data.get("source_type")).isEqualTo("TOPUP");
         assertThat(data.get("bucket_priority")).isEqualTo(5);
 
@@ -153,27 +153,27 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
 
     @Test
     void testInsufficientBalance_rejectsWhenStrict() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
         // 月度桶 10 (priority=20), 充值桶 0 (priority=10) — 总 10
-        Long monthlySetId = createBenefitSet(appId, 10, 20, 10, itemId).getId();
-        Long topUpSetId = createBenefitSet(appId, 0, 10, 0, itemId).getId();
-        createSubscription(appId, "user-001", monthlySetId);
-        createSubscription(appId, "user-001", topUpSetId);
+        Long monthlySetId = createBenefitSet(tenantId, 10, 20, 10, itemId).getId();
+        Long topUpSetId = createBenefitSet(tenantId, 0, 10, 0, itemId).getId();
+        createSubscription(tenantId, "user-001", monthlySetId);
+        createSubscription(tenantId, "user-001", topUpSetId);
 
         // 严格模式 (默认): 请求 20, 总额仅 10 → 整笔拒绝
         PostConsumesDirectRequest req = new PostConsumesDirectRequest();
         req.setUserid("user-001");
         req.setItemId(String.valueOf(itemId));
-        req.setExternalOrderId("ext-strict-" + uniqueAppid());
+        req.setExternalOrderId("ext-strict-" + uniqueTenantid());
         req.setConsumeNum(20);
-        ApiResponse<?> resp = (ApiResponse<?>) runtimeService.postConsumesDirect(appId, req);
+        ApiResponse<?> resp = (ApiResponse<?>) runtimeService.postConsumesDirect(tenantId, req);
         assertThat(resp.isFail()).isTrue();
         assertThat(resp.getMessage()).isEqualTo("INSUFFICIENT_BALANCE");
 
         // 桶字段未被修改
         List<UbmaSubscribeItem> allItems = subscribeItemMapper.selectList(
-                new LambdaQueryWrapper<UbmaSubscribeItem>().eq(UbmaSubscribeItem::getAppId, appId));
+                new LambdaQueryWrapper<UbmaSubscribeItem>().eq(UbmaSubscribeItem::getTenantId, tenantId));
         for (UbmaSubscribeItem b : allItems) {
             assertThat(b.getPeriodConsumed()).isEqualTo(0);
         }
@@ -181,21 +181,21 @@ public class QuotaBucketMultiSourceIT extends BaseServiceTest {
 
     @Test
     void testInsufficientBalance_partialAllowedDrainsAvailable() {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long monthlySetId = createBenefitSet(appId, 10, 20, 10, itemId).getId();
-        Long topUpSetId = createBenefitSet(appId, 0, 10, 0, itemId).getId();
-        String subIdMonthly = createSubscription(appId, "user-001", monthlySetId);
-        createSubscription(appId, "user-001", topUpSetId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long monthlySetId = createBenefitSet(tenantId, 10, 20, 10, itemId).getId();
+        Long topUpSetId = createBenefitSet(tenantId, 0, 10, 0, itemId).getId();
+        String subIdMonthly = createSubscription(tenantId, "user-001", monthlySetId);
+        createSubscription(tenantId, "user-001", topUpSetId);
 
         // 部分允许: 请求 20, 实际只扣到 10
         PostConsumesDirectRequest req = new PostConsumesDirectRequest();
         req.setUserid("user-001");
         req.setItemId(String.valueOf(itemId));
-        req.setExternalOrderId("ext-partial-" + uniqueAppid());
+        req.setExternalOrderId("ext-partial-" + uniqueTenantid());
         req.setConsumeNum(20);
         req.setPartialAllowed(true);
-        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(appId, req));
+        Map<String, Object> data = extractData(runtimeService.postConsumesDirect(tenantId, req));
         assertThat(data.get("consume_num")).isEqualTo(10);
 
         // 月度桶扣满

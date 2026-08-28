@@ -10,10 +10,10 @@ import jakarta.validation.ConstraintViolation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PostApplicationsRequestTest {
+public class PostTenantsRequestTest {
     private final Validator validator;
 
-    public PostApplicationsRequestTest() {
+    public PostTenantsRequestTest() {
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             validator = factory.getValidator();
         }
@@ -21,14 +21,14 @@ public class PostApplicationsRequestTest {
 
     @Test
     public void testValidRequest() {
-        PostApplicationsRequest req = new PostApplicationsRequest();
+        PostTenantsRequest req = new PostTenantsRequest();
         req.setName("Test App");
         assertThat(validator.validate(req)).isEmpty();
     }
 
     @Test
     public void testMissingName() {
-        PostApplicationsRequest req = new PostApplicationsRequest();
+        PostTenantsRequest req = new PostTenantsRequest();
         assertThat(validator.validate(req)).isNotEmpty();
     }
 }

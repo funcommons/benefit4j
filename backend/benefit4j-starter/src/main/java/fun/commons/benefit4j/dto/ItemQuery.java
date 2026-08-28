@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 public class ItemQuery extends PageQuery {
-    private Long appId;
+    private Long tenantId;
     private String status;
     private Integer priorityMin;
     private Integer priorityMax;

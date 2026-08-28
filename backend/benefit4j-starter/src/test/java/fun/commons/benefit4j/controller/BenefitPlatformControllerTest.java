@@ -25,31 +25,31 @@ public class BenefitPlatformControllerTest {
     }
 
     @Test
-    void testPostApplications() {
-        when(client.postApplications(any())).thenReturn(null);
-        controller.postApplications((PostApplicationsRequest) null);
-        verify(client).postApplications(any());
+    void testPostTenants() {
+        when(client.postTenants(any())).thenReturn(null);
+        controller.postTenants((PostTenantsRequest) null);
+        verify(client).postTenants(any());
     }
 
     @Test
-    void testGetApplications() {
-        when(client.getApplications()).thenReturn(null);
-        controller.getApplications();
-        verify(client).getApplications();
+    void testGetTenants() {
+        when(client.getTenants()).thenReturn(null);
+        controller.getTenants();
+        verify(client).getTenants();
     }
 
     @Test
-    void testPutApplicationsAppId() {
-        when(client.putApplicationsAppId((Long) any(), any())).thenReturn(null);
-        controller.putApplicationsAppId((Long) null, (PutApplicationsAppIdRequest) null);
-        verify(client).putApplicationsAppId((Long) any(), any());
+    void testPutTenantsTenantId() {
+        when(client.putTenantsTenantId((Long) any(), any())).thenReturn(null);
+        controller.putTenantsTenantId((Long) null, (PutTenantsTenantIdRequest) null);
+        verify(client).putTenantsTenantId((Long) any(), any());
     }
 
     @Test
-    void testPostApplicationsAppIdSecret() {
-        when(client.postApplicationsAppIdSecret((Long) any())).thenReturn(null);
-        controller.postApplicationsAppIdSecret((Long) null);
-        verify(client).postApplicationsAppIdSecret((Long) any());
+    void testPostTenantsTenantIdSecret() {
+        when(client.postTenantsTenantIdSecret((Long) any())).thenReturn(null);
+        controller.postTenantsTenantIdSecret((Long) null);
+        verify(client).postTenantsTenantIdSecret((Long) any());
     }
 
     @Test

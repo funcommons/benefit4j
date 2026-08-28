@@ -40,7 +40,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testCreateAsset_withDbDefaults() {
-        String code = "T" + uniqueAppid().toUpperCase();
+        String code = "T" + uniqueTenantid().toUpperCase();
         UbmxAsset created = registry.createAsset(newAsset(code));
 
         assertThat(created.getCode()).isEqualTo(code);
@@ -57,7 +57,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testCreateAsset_duplicateCodeRejected() {
-        String code = "T" + uniqueAppid().toUpperCase();
+        String code = "T" + uniqueTenantid().toUpperCase();
         registry.createAsset(newAsset(code));
         assertThatThrownBy(() -> registry.createAsset(newAsset(code)))
                 .isInstanceOf(DuplicateKeyException.class);
@@ -69,7 +69,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.ASSET_INVALID);
-        UbmxAsset badPrecision = newAsset("T" + uniqueAppid().toUpperCase());
+        UbmxAsset badPrecision = newAsset("T" + uniqueTenantid().toUpperCase());
         badPrecision.setPrecision(9);
         assertThatThrownBy(() -> registry.createAsset(badPrecision))
                 .isInstanceOf(AssetsException.class);
@@ -77,7 +77,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testGetRequired_notFound() {
-        assertThatThrownBy(() -> registry.getRequired("NO_SUCH_" + uniqueAppid()))
+        assertThatThrownBy(() -> registry.getRequired("NO_SUCH_" + uniqueTenantid()))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.ASSET_NOT_FOUND);
@@ -85,7 +85,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testSuspendAndResume() {
-        String code = "T" + uniqueAppid().toUpperCase();
+        String code = "T" + uniqueTenantid().toUpperCase();
         registry.createAsset(newAsset(code));
 
         registry.suspend(code);
@@ -102,7 +102,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testListByFilter() {
-        String code = "T" + uniqueAppid().toUpperCase();
+        String code = "T" + uniqueTenantid().toUpperCase();
         registry.createAsset(newAsset(code));
 
         List<UbmxAsset> active = registry.list("VIRTUAL", "ACTIVE");
@@ -114,7 +114,7 @@ public class AssetRegistryServiceIT extends BaseMapperTest {
 
     @Test
     public void testPatchAsset_onlyAllowedFields() {
-        String code = "T" + uniqueAppid().toUpperCase();
+        String code = "T" + uniqueTenantid().toUpperCase();
         registry.createAsset(newAsset(code));
 
         UbmxAsset patch = new UbmxAsset();

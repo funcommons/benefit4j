@@ -24,7 +24,7 @@ import java.util.Set;
 /**
  * assets 域平台运营面(P3 前端): 资产注册中心 CRUD + 运营查询。
  * 与既有 platform 控制器同为 APP 型 token —— 平台登录(fvUQ…/PLATFORM 凭据)与租户登录同型,
- * 区别仅 app_id claim(平台=0);查询按「平台视角」跨 app,app_id 参数可选收窄。
+ * 区别仅 tenant_id claim(平台=0);查询按「平台视角」跨 app,tenant_id 参数可选收窄。
  * 运维通道(对账/幂等释放/授信调额)在 {@link BenefitAssetsOpsController}(OPS 型)。
  */
 @RestController
@@ -83,8 +83,8 @@ public class BenefitAssetsPlatformController {
             @RequestParam("owner_type") String ownerType,
             @RequestParam("owner_id") Long ownerId,
             @RequestParam(value = "asset_code", required = false) String assetCode,
-            @RequestParam(value = "app_id", required = false) Long appId) {
-        return ApiResponse.success(queryService.listAccountsByOwner(ownerType, ownerId, assetCode, appId));
+            @RequestParam(value = "tenant_id", required = false) Long tenantId) {
+        return ApiResponse.success(queryService.listAccountsByOwner(ownerType, ownerId, assetCode, tenantId));
     }
 
     /** 运营查账户流水(平台视角;account_ref 如 user:123;账户不存在返回空) */
@@ -92,12 +92,12 @@ public class BenefitAssetsPlatformController {
     public ApiResponse<Object> getPostings(
             @RequestParam("account_ref") String accountRef,
             @RequestParam("asset_code") String assetCode,
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         String[] ref = parseRef(accountRef);
         return ApiResponse.success(queryService.listPostingsByOwner(
-                ref[0], Long.parseLong(ref[1]), assetCode, appId, page, size));
+                ref[0], Long.parseLong(ref[1]), assetCode, tenantId, page, size));
     }
 
     /** user:123 → ["USER","123"];运营面只接受主体引用,边界户(issue:*)不在本面 */

@@ -1,6 +1,6 @@
 package fun.commons.benefit4j.assets.scheduler;
 
-import fun.commons.benefit4j.assets.mapper.UbmaApplicationAdapter;
+import fun.commons.benefit4j.assets.mapper.UbmaTenantAdapter;
 import fun.commons.benefit4j.assets.service.AssetsReconcileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,15 +17,15 @@ import org.springframework.stereotype.Component;
 public class AssetsReconcileScheduler {
 
     private final AssetsReconcileService reconcileService;
-    private final UbmaApplicationAdapter appAdapter;
+    private final UbmaTenantAdapter appAdapter;
 
     @Scheduled(cron = "${assets.reconcile.cron:0 0 2 * * *}", zone = "Asia/Shanghai")
     public void dailyReconcile() {
-        for (Long appId : appAdapter.allAppIds()) {
+        for (Long tenantId : appAdapter.allTenantIds()) {
             try {
-                int diffs = reconcileService.runAllAssets(appId);
+                int diffs = reconcileService.runAllAssets(tenantId);
                 if (diffs > 0) {
-                    log.error("[assets][对账] 发现差异待处置: appId={} diffs={}", appId, diffs);
+                    log.error("[assets][对账] 发现差异待处置: tenantId={} diffs={}", tenantId, diffs);
                 }
             } catch (Exception e) {
                 log.error("[assets][对账] 单 app 对账失败,继续下一个", e);

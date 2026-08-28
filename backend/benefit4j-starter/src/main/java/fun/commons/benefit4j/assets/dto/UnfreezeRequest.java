@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class UnfreezeRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     private String freezeNo;
 

@@ -32,7 +32,7 @@ public class DefaultBenefitRuntimeServiceTest {
     @Mock private UbmaBenefitSetMapper benefitSetMapper;
     @Mock private UbmaBenefitRefMapper benefitRefMapper;
     @Mock private UbmaConsumeMapper consumeMapper;
-    @Mock private UbmaApplicationMapper applicationMapper;
+    @Mock private UbmaTenantMapper applicationMapper;
     @Mock private UbmaRefundMapper refundMapper;
     @Mock private UbmaUnsubscribeMapper unsubscribeMapper;
     @Mock private fun.commons.benefit4j.mapper.UbmaOutboxMapper outboxMapper;
@@ -76,7 +76,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testPostSubscriptions_Success() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         set.setStatus("ACTIVE");
         set.setDuration(1);
         set.setDurationUnit("month");
@@ -146,7 +146,7 @@ public class DefaultBenefitRuntimeServiceTest {
 
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setUserid("user-001");
         sub.setSetId(10L);
         sub.setStatus("ACTIVE");
@@ -221,7 +221,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testCommit_Success() {
         UbmaConsume consume = new UbmaConsume();
         consume.setId(500L);
-        consume.setAppId(1L);
+        consume.setTenantId(1L);
         consume.setStatus("RESERVED");
         consume.setSubsItemId(200L);
         consume.setItemId(100L);
@@ -233,7 +233,7 @@ public class DefaultBenefitRuntimeServiceTest {
 
         UbmaSubscribeItem item = new UbmaSubscribeItem();
         item.setId(200L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         item.setSubscribeId(1L);
         item.setFrozenConsumed(2);
         item.setPeriodConsumed(0);
@@ -277,7 +277,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testRelease_Success() {
         UbmaConsume consume = new UbmaConsume();
         consume.setId(500L);
-        consume.setAppId(1L);
+        consume.setTenantId(1L);
         consume.setStatus("RESERVED");
         consume.setSubsItemId(200L);
         consume.setConsumeNum(2);
@@ -288,7 +288,7 @@ public class DefaultBenefitRuntimeServiceTest {
 
         UbmaSubscribeItem item = new UbmaSubscribeItem();
         item.setId(200L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         item.setSubscribeId(1L);
         item.setFrozenConsumed(2);
         item.setPeriodConsumed(0);
@@ -331,7 +331,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testRefund_NotCommitted() {
         UbmaConsume consume = new UbmaConsume();
         consume.setId(500L);
-        consume.setAppId(1L);
+        consume.setTenantId(1L);
         consume.setStatus("RESERVED");
         when(consumeMapper.selectById(500L)).thenReturn(consume);
 
@@ -349,7 +349,7 @@ public class DefaultBenefitRuntimeServiceTest {
 
         UbmaConsume consume = new UbmaConsume();
         consume.setId(500L);
-        consume.setAppId(1L);
+        consume.setTenantId(1L);
         consume.setStatus("COMMITTED");
         when(consumeMapper.selectById(500L)).thenReturn(consume);
 
@@ -365,7 +365,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testRefund_Success() {
         UbmaConsume consume = new UbmaConsume();
         consume.setId(500L);
-        consume.setAppId(1L);
+        consume.setTenantId(1L);
         consume.setStatus("COMMITTED");
         consume.setSubsItemId(200L);
         consume.setItemId(100L);
@@ -375,7 +375,7 @@ public class DefaultBenefitRuntimeServiceTest {
 
         UbmaSubscribeItem item = new UbmaSubscribeItem();
         item.setId(200L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         item.setSubscribeId(1L);
         item.setPeriodConsumed(5);
         item.setTotalConsumed(10);
@@ -423,7 +423,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testCancel_FrozenQuotaRejects() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setFrozenConsumed(3);
         when(subscribeMapper.selectById(1L)).thenReturn(sub);
@@ -440,7 +440,7 @@ public class DefaultBenefitRuntimeServiceTest {
     void testCancel_Success() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setFrozenConsumed(0);
         sub.setVersion(0);

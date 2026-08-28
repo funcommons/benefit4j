@@ -24,7 +24,7 @@ public class BenefitTenantControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        TokenContext.set("APP", Map.of("app_id", 1L));
+        TokenContext.set("APP", Map.of("tenant_id", 1L));
     }
 
     @AfterEach

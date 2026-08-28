@@ -23,7 +23,7 @@ public class UbmxFreeze {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long accountId;
 

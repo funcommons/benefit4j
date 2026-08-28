@@ -31,7 +31,7 @@ public class BenefitAssetsOpsController {
     @PostMapping("/reconcile/run")
     @Auditable(action = "ASSETS_RECONCILE", targetType = "reconcile", targetIdSpel = "#req.assetCode")
     public ApiResponse<Object> runReconcile(@RequestBody ReconcileRunRequest req) {
-        return ApiResponse.success(reconcileService.runOnce(req.getAppId(), req.getAssetCode()));
+        return ApiResponse.success(reconcileService.runOnce(req.getTenantId(), req.getAssetCode()));
     }
 
     /** F1 授信调额(资产需开 can_credit;双签审计为后续项,当前 OPS token + @Auditable) */
@@ -39,17 +39,17 @@ public class BenefitAssetsOpsController {
     @Auditable(action = "ASSETS_CREDIT_LIMIT", targetType = "account", targetIdSpel = "#account_id")
     public ApiResponse<Void> patchCreditLimit(@PathVariable("account_id") Long accountId,
             @RequestBody CreditLimitRequest req) {
-        accountService.updateCreditLimit(req.getAppId(), accountId, req.getCreditLimit());
+        accountService.updateCreditLimit(req.getTenantId(), accountId, req.getCreditLimit());
         return ApiResponse.success();
     }
 
     /** 调额请求 */
     public static class CreditLimitRequest {
-        private Long appId;
+        private Long tenantId;
         private java.math.BigDecimal creditLimit;
 
-        public Long getAppId() { return appId; }
-        public void setAppId(Long appId) { this.appId = appId; }
+        public Long getTenantId() { return tenantId; }
+        public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
         public java.math.BigDecimal getCreditLimit() { return creditLimit; }
         public void setCreditLimit(java.math.BigDecimal creditLimit) { this.creditLimit = creditLimit; }
     }
@@ -58,28 +58,28 @@ public class BenefitAssetsOpsController {
     @PostMapping("/idempotency/release")
     @Auditable(action = "ASSETS_IDEMPOTENCY_RELEASE", targetType = "tx_order", targetIdSpel = "#req.extOrderId")
     public ApiResponse<Object> releaseIdempotency(@RequestBody IdempotencyReleaseRequest req) {
-        return ApiResponse.success(idempotencyService.release(req.getAppId(), req.getExtOrderId(), req.getReason()));
+        return ApiResponse.success(idempotencyService.release(req.getTenantId(), req.getExtOrderId(), req.getReason()));
     }
 
     /** 对账手动触发请求 */
     public static class ReconcileRunRequest {
-        private Long appId;
+        private Long tenantId;
         private String assetCode;
 
-        public Long getAppId() { return appId; }
-        public void setAppId(Long appId) { this.appId = appId; }
+        public Long getTenantId() { return tenantId; }
+        public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
         public String getAssetCode() { return assetCode; }
         public void setAssetCode(String assetCode) { this.assetCode = assetCode; }
     }
 
     /** 幂等释放请求 */
     public static class IdempotencyReleaseRequest {
-        private Long appId;
+        private Long tenantId;
         private String extOrderId;
         private String reason;
 
-        public Long getAppId() { return appId; }
-        public void setAppId(Long appId) { this.appId = appId; }
+        public Long getTenantId() { return tenantId; }
+        public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
         public String getExtOrderId() { return extOrderId; }
         public void setExtOrderId(String extOrderId) { this.extOrderId = extOrderId; }
         public String getReason() { return reason; }

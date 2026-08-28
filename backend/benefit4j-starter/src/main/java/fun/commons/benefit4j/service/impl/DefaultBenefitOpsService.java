@@ -71,8 +71,8 @@ public class DefaultBenefitOpsService implements BenefitOpsService {
         LambdaQueryWrapper<UbmaSubscribe> refreshQuery = new LambdaQueryWrapper<>();
         refreshQuery.le(UbmaSubscribe::getNextRefreshTime, now)
                 .in(UbmaSubscribe::getStatus, "ACTIVE", "EXHAUSTED");
-        if (req.getAppId() != null) {
-            refreshQuery.eq(UbmaSubscribe::getAppId, req.getAppId());
+        if (req.getTenantId() != null) {
+            refreshQuery.eq(UbmaSubscribe::getTenantId, req.getTenantId());
         }
         List<UbmaSubscribe> toRefresh = subscribeMapper.selectList(refreshQuery);
 
@@ -141,8 +141,8 @@ public class DefaultBenefitOpsService implements BenefitOpsService {
         expiredBucketQuery.isNotNull(UbmaSubscribeItem::getExpiresAt)
                 .lt(UbmaSubscribeItem::getExpiresAt, now)
                 .eq(UbmaSubscribeItem::getIsDeleted, 0);
-        if (req.getAppId() != null) {
-            expiredBucketQuery.eq(UbmaSubscribeItem::getAppId, req.getAppId());
+        if (req.getTenantId() != null) {
+            expiredBucketQuery.eq(UbmaSubscribeItem::getTenantId, req.getTenantId());
         }
         Long expiredBucketCount = subscribeItemMapper.selectCount(expiredBucketQuery);
 

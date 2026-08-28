@@ -22,7 +22,7 @@ public class UbmxPosting {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long appId;
+    private Long tenantId;
 
     /** 业务交易号(同一笔业务多腿共享) */
     private Long txId;

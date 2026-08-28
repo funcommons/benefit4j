@@ -87,11 +87,11 @@ public class Benefit4jAutoConfiguration {
     // 默认 RestTemplate + HttpTransport 由 framework4j-transport 的 TransportAutoConfiguration 提供,
     // 此处仅 remote 模式用 AuthenticatedHttpTransport 覆盖 (S2S JWT + HMAC 签名)
 
-    // remote 模式配了 remote-app-id → 用 AuthenticatedHttpTransport 覆盖默认 (自动 S2S JWT + HMAC 签名)
+    // remote 模式配了 remote-tenant-id → 用 AuthenticatedHttpTransport 覆盖默认 (自动 S2S JWT + HMAC 签名)
     // @Primary 优先于 framework4j-transport 的默认 RestTemplateHttpTransport
     @Bean
     @org.springframework.context.annotation.Primary
-    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "benefit4j.runtime", name = "remote-app-id")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "benefit4j.runtime", name = "remote-tenant-id")
     public fun.commons.framework4j.transport.HttpTransport benefit4jAuthenticatedHttpTransport(
             org.springframework.web.client.RestTemplate restTemplate,
             org.springframework.beans.factory.ObjectProvider<fun.commons.framework4j.accesstoken.core.AccessTokenGenerator> tokenGeneratorProvider,

@@ -19,8 +19,8 @@ import java.util.Map;
  * {@link RequestContextHolder} 取当前请求，自行解析 Authorization 中的 JWT。
  * <p>
  * 「平台运营」判定：benefit4j 平台凭据（benefit4j.security.platform.*）签发的 token
- * 其 app_id claim 恒为 0（合成平台应用，见 DefaultBenefitAuthService#syntheticPlatformApp），
- * 以 app_id==0 作为运营身份标识；普通租户应用 token 的 app_id 为真实雪花 ID（>0）一律拒绝。
+ * 其 tenant_id claim 恒为 0（合成平台租户，见 DefaultBenefitAuthService#syntheticPlatformTenant），
+ * 以 tenant_id==0 作为运营身份标识；普通租户 token 的 tenant_id 为真实雪花 ID（>0）一律拒绝。
  * <p>
  * 业务方可自行声明 {@code traceLogAuthValidator} Bean 覆盖本实现。
  *
@@ -38,9 +38,9 @@ public class Benefit4jTraceLogAuthValidator implements TraceLogAuthValidator {
     /**
      * 当前请求是否平台运营：有效 JWT + keyHash 匹配平台凭据。
      * <p>
-     * benefit4j 平台凭据（benefit4j.security.platform.*）签发 token 时 claims.app_id=0
-     * （合成平台应用，见 DefaultBenefitAuthService#syntheticPlatformApp），policy.key=[app_id]
-     * 使其 keyHash = HMAC-SHA256("0", hashSalt)。JWT 不携带 app_id（claims 存 Redis
+     * benefit4j 平台凭据（benefit4j.security.platform.*）签发 token 时 claims.tenant_id=0
+     * （合成平台租户，见 DefaultBenefitAuthService#syntheticPlatformTenant），policy.key=[tenant_id]
+     * 使其 keyHash = HMAC-SHA256("0", hashSalt)。JWT 不携带 tenant_id（claims 存 Redis
      * metadata），故比对 hash 即可识别平台 token —— 纯本地计算，无 Redis 往返。
      */
     private boolean isPlatformOperator() {

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class RepayRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 幂等键 */
     private String requestId;

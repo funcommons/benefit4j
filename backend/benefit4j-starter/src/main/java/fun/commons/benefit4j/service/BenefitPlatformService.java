@@ -1,20 +1,20 @@
 package fun.commons.benefit4j.service;
 
 public interface BenefitPlatformService {
-    // 颁发新租户(开通 AppId、AK、SK)
-    Object postApplications(fun.commons.benefit4j.dto.PostApplicationsRequest req);
+    // 颁发新租户(开通 TenantId、AK、SK)
+    Object postTenants(fun.commons.benefit4j.dto.PostTenantsRequest req);
 
     // 全局租户管控列表查询
-    Object getApplications();
+    Object getTenants();
 
     // 修改租户基础信息或封禁租户
-    Object putApplicationsAppId(Long appId, fun.commons.benefit4j.dto.PutApplicationsAppIdRequest req);
+    Object putTenantsTenantId(Long tenantId, fun.commons.benefit4j.dto.PutTenantsTenantIdRequest req);
 
-    // 重置应用密钥 (返回新明文密钥, 仅出现一次)
-    Object postApplicationsAppIdSecret(Long appId);
+    // 重置租户密钥 (返回新明文密钥, 仅出现一次)
+    Object postTenantsTenantIdSecret(Long tenantId);
 
-    // 揭示应用密钥明文 (列表接口脱敏, 仅在此处返回完整密钥)
-    Object getApplicationsAppIdSecret(Long appId);
+    // 揭示租户密钥明文 (列表接口脱敏, 仅在此处返回完整密钥)
+    Object getTenantsTenantIdSecret(Long tenantId);
 
     // 沉淀并发布系统全局通用权益模板
     Object postGlobalTemplates(fun.commons.benefit4j.dto.PostGlobalTemplatesRequest req);
@@ -32,7 +32,7 @@ public interface BenefitPlatformService {
     Object getStatisticsLiabilities();
 
     // 平台权益项总览: 跨租户权益项实时聚合 (包含 quota / used / usage), 多条件分页只读
-    Object getPlatformItems(Long appId,
+    Object getPlatformItems(Long tenantId,
                             String status,
                             String keyword,
                             java.time.OffsetDateTime createdAtStart,
@@ -41,7 +41,7 @@ public interface BenefitPlatformService {
                             Integer size);
 
     // 平台权益包总览: 跨租户权益包实时聚合 (租户ubma_benefit_set, 非模板), 多条件分页只读
-    Object getPlatformBenefitSets(Long appId,
+    Object getPlatformBenefitSets(Long tenantId,
                                   String status,
                                   String keyword,
                                   Integer priorityMin,
@@ -61,7 +61,7 @@ public interface BenefitPlatformService {
     Object deleteItemTemplatesItemId(Long itemId);
 
     // 跨租户多条件分页查询订阅
-    Object getPlatformSubscriptions(Long appId,
+    Object getPlatformSubscriptions(Long tenantId,
                                     String userid,
                                     String setId,
                                     String status,
@@ -75,10 +75,10 @@ public interface BenefitPlatformService {
                                     Integer size);
 
     // 跨租户列出指定订阅下的多源额度桶 (V1.2.0)
-    Object getPlatformSubscriptionsSubscribeIdItems(Long appId, String subscribeId, String itemId);
+    Object getPlatformSubscriptionsSubscribeIdItems(Long tenantId, String subscribeId, String itemId);
 
     // 跨租户多条件分页查询扣减流水
-    Object getPlatformConsumes(Long appId,
+    Object getPlatformConsumes(Long tenantId,
                                String userid,
                                String subsItemId,
                                String itemId,
@@ -93,6 +93,6 @@ public interface BenefitPlatformService {
                                Integer size);
 
     // 跨租户手动退减扣减流水
-    Object postPlatformConsumesIdRefund(Long appId, String consumeId, fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req);
+    Object postPlatformConsumesIdRefund(Long tenantId, String consumeId, fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req);
 
 }

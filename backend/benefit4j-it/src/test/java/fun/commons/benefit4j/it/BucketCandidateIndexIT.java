@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * 目标:
  *   1) 验证 idx_user_item_active_priority 索引在 PG schema 中存在,
- *      列顺序 (app_id, item_id, bucket_priority DESC, expires_at ASC NULLS LAST)
+ *      列顺序 (tenant_id, item_id, bucket_priority DESC, expires_at ASC NULLS LAST)
  *      与 WHERE is_deleted=0 部分索引条件都被正确创建.
  *      防止后续 schema 变更悄悄回退这个索引.
  *   2) 验证 findDeductionCandidates 等价查询在 50+ 桶/单用户场景下
@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *     V1.2.1__bucket_candidate_index.sql 不会被自动执行. @BeforeAll 兜底: 索引不存在
  *     就补建, 保证 IT 可重复运行且与生产期望一致.
  *   - 测试 1 用 schema 元数据断言 (pg_indexes / pg_index) 而非 EXPLAIN:
- *     PG optimizer 在 5K 行规模下会选更便宜的"单列 app_id 索引 + Sort"
+ *     PG optimizer 在 5K 行规模下会选更便宜的"单列 tenant_id 索引 + Sort"
  *     (Sort 才 4ms/896kB, 不值得走复合索引), 所以 EXPLAIN 断言不稳定.
  *     索引存在 + 列定义正确才是真正的回归保护.
  *   - Druid Wall 默认拦截 ANALYZE / EXPLAIN 等维护语句, 本测试用 DriverManager
@@ -84,6 +84,13 @@ public class BucketCandidateIndexIT extends BaseServiceTest {
         // 直接读 SQL 迁移文件, 与生产运维执行的脚本保持一致
         String ddl = loadV121Ddl();
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
+            // 索引已存在(可能已是 V1.4.0 tenant_id 版)→ 跳过: 旧迁移引用 app_id,
+            // 在改名后的库上 CREATE INDEX IF NOT EXISTS 的跳过分支仍会因列不存在报错
+            try (var probe = conn.createStatement();
+                 var rs = probe.executeQuery(
+                     "SELECT 1 FROM pg_indexes WHERE indexname='" + INDEX_NAME + "'")) {
+                if (rs.next()) return;
+            }
             try (var stmt = conn.createStatement()) {
                 stmt.execute(ddl);
             }
@@ -100,11 +107,11 @@ public class BucketCandidateIndexIT extends BaseServiceTest {
                     .isNotNull()
                     .startsWith("CREATE INDEX");
 
-            // 2) 列顺序必须包含 (app_id, item_id, bucket_priority, expires_at)
+            // 2) 列顺序必须包含 (tenant_id, item_id, bucket_priority, expires_at)
             List<String> indexedColumns = readIndexedColumnNames(conn);
             assertThat(indexedColumns)
                     .as("indexed columns (in order)")
-                    .containsExactly("app_id", "item_id", "bucket_priority", "expires_at");
+                    .containsExactly("tenant_id", "item_id", "bucket_priority", "expires_at");
 
             // 3) WHERE is_deleted = 0 部分索引条件必须存在
             assertThat(definition.toLowerCase())
@@ -129,16 +136,16 @@ public class BucketCandidateIndexIT extends BaseServiceTest {
     @Test
     void testFindDeductionCandidates_returnsByPriorityOrder() {
         // 功能正确性: 50 个桶, priority 不同, 排序符合预期
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 100, 10, itemId).getId();
-        String subscribeId = createSubscription(appId, "order-user-" + uniqueAppid(), setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 100, 10, itemId).getId();
+        String subscribeId = createSubscription(tenantId, "order-user-" + uniqueTenantid(), setId);
         Long subId = toLongId(subscribeId);
 
         OffsetDateTime t0 = OffsetDateTime.now();
         for (int i = 0; i < 50; i++) {
             UbmaSubscribeItem b = new UbmaSubscribeItem();
-            b.setAppId(appId);
+            b.setTenantId(tenantId);
             b.setSubscribeId(subId);
             b.setItemId(itemId);
             b.setQuotaLimit(100);
@@ -152,7 +159,7 @@ public class BucketCandidateIndexIT extends BaseServiceTest {
 
         OffsetDateTime now = OffsetDateTime.now();
         LambdaQueryWrapper<UbmaSubscribeItem> q = new LambdaQueryWrapper<>();
-        q.eq(UbmaSubscribeItem::getAppId, appId)
+        q.eq(UbmaSubscribeItem::getTenantId, tenantId)
                 .eq(UbmaSubscribeItem::getItemId, itemId)
                 // 只看自己插入的 ORD_* 桶, 排除 createSubscription 自动建的 SUBSCRIPTION 默认桶
                 .like(UbmaSubscribeItem::getSourceType, "ORD_%")

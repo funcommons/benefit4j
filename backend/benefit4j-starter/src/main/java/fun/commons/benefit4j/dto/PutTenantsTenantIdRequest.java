@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class PutApplicationsAppIdRequest {
+public class PutTenantsTenantIdRequest {
     @Size(max = 64, message = "name最长64字符")
     private String name;
 

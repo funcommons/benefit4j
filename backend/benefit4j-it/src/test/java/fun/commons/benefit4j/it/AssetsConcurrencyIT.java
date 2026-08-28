@@ -40,18 +40,18 @@ public class AssetsConcurrencyIT extends BaseMapperTest {
     @Autowired
     private AccountService accountService;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     @Test
     public void test100ThreadsSameAccount_noOverIssue() throws Exception {
         Long uid = uniqueLongId();
         // 预充 600: 100 线程 × 5.5 = 550,余 50
-        postingService.commitTx(cmd("IT-CONC-PREP-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-CONC-PREP-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "600")));
 
         int threads = 100;
@@ -64,7 +64,7 @@ public class AssetsConcurrencyIT extends BaseMapperTest {
                 final int seq = i;
                 fs.add(pool.submit(() -> {
                     try {
-                        postingService.commitTx(cmd("IT-CONC-" + seq + "-" + uniqueAppid(), "CONSUME",
+                        postingService.commitTx(cmd("IT-CONC-" + seq + "-" + uniqueTenantid(), "CONSUME",
                                 leg("user:" + uid, "fee:POINTS", "POINTS", "5.5")));
                         ok.incrementAndGet();
                     } catch (Exception e) {
@@ -98,7 +98,7 @@ public class AssetsConcurrencyIT extends BaseMapperTest {
             for (int i = 0; i < threads; i++) {
                 fs.add(pool.submit(() -> {
                     for (int j = 0; j < perThread; j++) {
-                        postingService.commitTx(cmd("IT-BND-" + uniqueAppid(), "ISSUE",
+                        postingService.commitTx(cmd("IT-BND-" + uniqueTenantid(), "ISSUE",
                                 leg("issue:GOLD", "user:" + uniqueLongId(), "GOLD", "1")));
                         ok.incrementAndGet();
                     }
@@ -121,7 +121,7 @@ public class AssetsConcurrencyIT extends BaseMapperTest {
     @Test
     public void testDbCheckRejectsNegativeDirectSql() throws Exception {
         Long uid = uniqueLongId();
-        postingService.commitTx(cmd("IT-CHK-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-CHK-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "10")));
         Long accId = accountService.getOrCreateAccount(app(), "USER", uid, "POINTS").getId();
 
@@ -144,7 +144,7 @@ public class AssetsConcurrencyIT extends BaseMapperTest {
     private fun.commons.benefit4j.assets.dto.PostingCommand cmd(String orderId, String txType,
             fun.commons.benefit4j.assets.dto.PostingCommand.LegSpec... legs) {
         fun.commons.benefit4j.assets.dto.PostingCommand c = new fun.commons.benefit4j.assets.dto.PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

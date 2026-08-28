@@ -32,12 +32,12 @@ public class Benefit4jProperties {
     private int reserveTimeoutSeconds = 10;
 
     /**
-     * remote 模式下业务方 app_id (OpenID, 用于 S2S JWT claims + X-Access-Key)
+     * remote 模式下业务方 tenant_id (OpenID, 用于 S2S JWT claims + X-Access-Key)
      */
-    private String remoteAppId;
+    private String remoteTenantId;
 
     /**
-     * remote 模式下业务方 app_secret (HMAC-SHA256 签名密钥, 从独立部署 benefit4j 平台获取)
+     * remote 模式下业务方 tenant_secret (HMAC-SHA256 签名密钥, 从独立部署 benefit4j 平台获取)
      */
-    private String remoteAppSecret;
+    private String remoteTenantSecret;
 }

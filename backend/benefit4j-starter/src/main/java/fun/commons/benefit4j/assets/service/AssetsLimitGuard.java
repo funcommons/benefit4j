@@ -118,8 +118,8 @@ public class AssetsLimitGuard {
 
     private BigDecimal sumSince(UbmxAccount account, boolean inbound, OffsetDateTime since) {
         BigDecimal sum = inbound
-                ? postingMapper.sumInSince(account.getAppId(), account.getId(), since)
-                : postingMapper.sumOutSince(account.getAppId(), account.getId(), since);
+                ? postingMapper.sumInSince(account.getTenantId(), account.getId(), since)
+                : postingMapper.sumOutSince(account.getTenantId(), account.getId(), since);
         return sum == null ? BigDecimal.ZERO : sum;
     }
 

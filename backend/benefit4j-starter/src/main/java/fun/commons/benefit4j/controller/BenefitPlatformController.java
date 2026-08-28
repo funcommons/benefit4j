@@ -14,34 +14,34 @@ public class BenefitPlatformController {
 
     private final BenefitPlatformClient client;
 
-    @PostMapping("/benefit/api/v1/platform/applications")
-    public Object postApplications(
-            @Valid @RequestBody fun.commons.benefit4j.dto.PostApplicationsRequest req) {
-        return client.postApplications(req);
+    @PostMapping("/benefit/api/v1/platform/tenants")
+    public Object postTenants(
+            @Valid @RequestBody fun.commons.benefit4j.dto.PostTenantsRequest req) {
+        return client.postTenants(req);
     }
 
-    @GetMapping("/benefit/api/v1/platform/applications")
-    public Object getApplications() {
-        return client.getApplications();
+    @GetMapping("/benefit/api/v1/platform/tenants")
+    public Object getTenants() {
+        return client.getTenants();
     }
 
-    @PutMapping("/benefit/api/v1/platform/applications/{app_id}")
-    public Object putApplicationsAppId(
-            @OpenId @PathVariable("app_id") Long appId,
-            @Valid @RequestBody fun.commons.benefit4j.dto.PutApplicationsAppIdRequest req) {
-        return client.putApplicationsAppId(appId, req);
+    @PutMapping("/benefit/api/v1/platform/tenants/{tenant_id}")
+    public Object putTenantsTenantId(
+            @OpenId @PathVariable("tenant_id") Long tenantId,
+            @Valid @RequestBody fun.commons.benefit4j.dto.PutTenantsTenantIdRequest req) {
+        return client.putTenantsTenantId(tenantId, req);
     }
 
-    @PostMapping("/benefit/api/v1/platform/applications/{app_id}/reset-secret")
-    public Object postApplicationsAppIdSecret(
-            @OpenId @PathVariable("app_id") Long appId) {
-        return client.postApplicationsAppIdSecret(appId);
+    @PostMapping("/benefit/api/v1/platform/tenants/{tenant_id}/reset-secret")
+    public Object postTenantsTenantIdSecret(
+            @OpenId @PathVariable("tenant_id") Long tenantId) {
+        return client.postTenantsTenantIdSecret(tenantId);
     }
 
-    @GetMapping("/benefit/api/v1/platform/applications/{app_id}/secret")
-    public Object getApplicationsAppIdSecret(
-            @OpenId @PathVariable("app_id") Long appId) {
-        return client.getApplicationsAppIdSecret(appId);
+    @GetMapping("/benefit/api/v1/platform/tenants/{tenant_id}/secret")
+    public Object getTenantsTenantIdSecret(
+            @OpenId @PathVariable("tenant_id") Long tenantId) {
+        return client.getTenantsTenantIdSecret(tenantId);
     }
 
     @PostMapping("/benefit/api/v1/platform/global-templates")
@@ -74,19 +74,19 @@ public class BenefitPlatformController {
 
     @GetMapping("/benefit/api/v1/platform/items")
     public Object getPlatformItems(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "created_at_start", required = false) java.time.OffsetDateTime createdAtStart,
             @RequestParam(value = "created_at_end", required = false) java.time.OffsetDateTime createdAtEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getPlatformItems(appId, status, keyword, createdAtStart, createdAtEnd, page, size);
+        return client.getPlatformItems(tenantId, status, keyword, createdAtStart, createdAtEnd, page, size);
     }
 
     @GetMapping("/benefit/api/v1/platform/benefit-sets")
     public Object getPlatformBenefitSets(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "priority_min", required = false) Integer priorityMin,
@@ -95,7 +95,7 @@ public class BenefitPlatformController {
             @RequestParam(value = "created_at_end", required = false) java.time.OffsetDateTime createdAtEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getPlatformBenefitSets(appId, status, keyword, priorityMin, priorityMax, createdAtStart, createdAtEnd, page, size);
+        return client.getPlatformBenefitSets(tenantId, status, keyword, priorityMin, priorityMax, createdAtStart, createdAtEnd, page, size);
     }
 
     @PostMapping("/benefit/api/v1/platform/item-templates")
@@ -123,7 +123,7 @@ public class BenefitPlatformController {
 
     @GetMapping("/benefit/api/v1/platform/subscriptions")
     public Object getPlatformSubscriptions(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @RequestParam(value = "userid", required = false) String userid,
             @RequestParam(value = "set_id", required = false) String setId,
             @RequestParam(value = "status", required = false) String status,
@@ -135,20 +135,20 @@ public class BenefitPlatformController {
             @RequestParam(value = "created_at_end", required = false) java.time.OffsetDateTime createdAtEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getPlatformSubscriptions(appId, userid, setId, status, externalOrderId, keyword, dateBeginStart, dateBeginEnd, createdAtStart, createdAtEnd, page, size);
+        return client.getPlatformSubscriptions(tenantId, userid, setId, status, externalOrderId, keyword, dateBeginStart, dateBeginEnd, createdAtStart, createdAtEnd, page, size);
     }
 
     @GetMapping("/benefit/api/v1/platform/subscriptions/{subscribe_id}/items")
     public Object getPlatformSubscriptionsSubscribeIdItems(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @PathVariable("subscribe_id") String subscribeId,
             @RequestParam(value = "item_id", required = false) String itemId) {
-        return client.getPlatformSubscriptionsSubscribeIdItems(appId, subscribeId, itemId);
+        return client.getPlatformSubscriptionsSubscribeIdItems(tenantId, subscribeId, itemId);
     }
 
     @GetMapping("/benefit/api/v1/platform/consumes")
     public Object getPlatformConsumes(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @RequestParam(value = "userid", required = false) String userid,
             @RequestParam(value = "subs_item_id", required = false) String subsItemId,
             @RequestParam(value = "item_id", required = false) String itemId,
@@ -161,14 +161,14 @@ public class BenefitPlatformController {
             @RequestParam(value = "consume_time_end", required = false) java.time.OffsetDateTime consumeTimeEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getPlatformConsumes(appId, userid, subsItemId, itemId, status, externalOrderId, keyword, consumeNumMin, consumeNumMax, consumeTimeStart, consumeTimeEnd, page, size);
+        return client.getPlatformConsumes(tenantId, userid, subsItemId, itemId, status, externalOrderId, keyword, consumeNumMin, consumeNumMax, consumeTimeStart, consumeTimeEnd, page, size);
     }
 
     @PostMapping("/benefit/api/v1/platform/consumes/{consume_id}/refund")
     public Object postPlatformConsumesIdRefund(
-            @RequestParam(value = "app_id", required = false) Long appId,
+            @RequestParam(value = "tenant_id", required = false) Long tenantId,
             @PathVariable("consume_id") String consumeId,
             @Valid @RequestBody fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req) {
-        return client.postPlatformConsumesIdRefund(appId, consumeId, req);
+        return client.postPlatformConsumesIdRefund(tenantId, consumeId, req);
     }
 }

@@ -46,12 +46,12 @@ public class AssetsEndToEndIT extends BaseMapperTest {
     @Autowired
     private AssetRegistryService registry;
 
-    private Long appId;
+    private Long tenantId;
 
     @BeforeEach
     void setUp() {
-        if (appId == null) appId = createApp().getId();
-        TokenContext.set("APP", Map.of("app_id", appId));
+        if (tenantId == null) tenantId = createTenant().getId();
+        TokenContext.set("APP", Map.of("tenant_id", tenantId));
         ensureAsset("CNY_T");
     }
 
@@ -89,7 +89,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
     }
 
     private BigDecimal balance(String ownerType, Long ownerId, String asset) {
-        return accountService.getOrCreateAccount(appId, ownerType, ownerId, asset).getBalance();
+        return accountService.getOrCreateAccount(tenantId, ownerType, ownerId, asset).getBalance();
     }
 
     @Test
@@ -98,7 +98,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
         Long mid = uniqueLongId();
 
         // ① 充值入账 100(用户)+ 100(积分)
-        ApiResponse<Map<String, Object>> r1 = issue("E2E-1-" + uniqueAppid(),
+        ApiResponse<Map<String, Object>> r1 = issue("E2E-1-" + uniqueTenantid(),
                 leg("world:wechat", "user:" + uid, "CNY_T", "100"),
                 leg("issue:POINTS", "user:" + uid, "POINTS", "100"));
         assertThat(r1.isSuccess()).isTrue();
@@ -106,7 +106,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
         assertThat(balance("USER", uid, "POINTS")).isEqualByComparingTo("100");
 
         // ② 组合支付: 积分抵 5 + CNY 23 + 手续费 2
-        ApiResponse<Map<String, Object>> r2 = issue("E2E-2-" + uniqueAppid(),
+        ApiResponse<Map<String, Object>> r2 = issue("E2E-2-" + uniqueTenantid(),
                 leg("user:" + uid, "issue:POINTS", "POINTS", "5"),
                 leg("user:" + uid, "merchant:" + mid, "CNY_T", "23"),
                 leg("user:" + uid, "fee:CNY_T", "CNY_T", "2"));
@@ -116,7 +116,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
         assertThat(balance("MERCHANT", mid, "CNY_T")).isEqualByComparingTo("23");
 
         // ③ 退款原路回补(商家 → 用户 23)
-        issue("E2E-3-" + uniqueAppid(),
+        issue("E2E-3-" + uniqueTenantid(),
                 leg("merchant:" + mid, "user:" + uid, "CNY_T", "23"));
         assertThat(balance("MERCHANT", mid, "CNY_T")).isEqualByComparingTo("0");
         assertThat(balance("USER", uid, "CNY_T")).isEqualByComparingTo("98");
@@ -125,7 +125,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
 
         // ⑤ 余额不足: 应用层拦截(明确错误码)
         PostIssueRequest over = new PostIssueRequest();
-        over.setExtOrderId("E2E-5-" + uniqueAppid());
+        over.setExtOrderId("E2E-5-" + uniqueTenantid());
         over.setTxType("CONSUME");
         over.setLegs(List.of(leg("user:" + uid, "fee:CNY_T", "CNY_T", "9999")));
         PostIssueRequest finalOver = over;
@@ -139,7 +139,7 @@ public class AssetsEndToEndIT extends BaseMapperTest {
         assertThat(registry.list("FIAT", null)).isEmpty();
 
         // DoD: 同幂等键 5 连发只记一次
-        String orderId = "E2E-IDEM-" + uniqueAppid();
+        String orderId = "E2E-IDEM-" + uniqueTenantid();
         Long uid2 = uniqueLongId();
         Object firstTxId = null;
         for (int i = 0; i < 5; i++) {

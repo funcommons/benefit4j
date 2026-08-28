@@ -78,7 +78,7 @@ public class DefaultBenefitOpsServiceTest {
     void testRefreshCycles_ExpiredSubscription() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setSetId(10L);
         sub.setStatus("ACTIVE");
         sub.setDateEnd(OffsetDateTime.now().minusDays(1)); // expired
@@ -98,7 +98,7 @@ public class DefaultBenefitOpsServiceTest {
     void testRefreshCycles_RefreshActiveSubscription() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setSetId(10L);
         sub.setStatus("ACTIVE");
         sub.setDateEnd(OffsetDateTime.now().plusDays(30)); // not expired
@@ -128,7 +128,7 @@ public class DefaultBenefitOpsServiceTest {
     void testRefreshCycles_DryRun() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setSetId(10L);
         sub.setStatus("ACTIVE");
         sub.setDateEnd(OffsetDateTime.now().plusDays(30));
@@ -147,7 +147,7 @@ public class DefaultBenefitOpsServiceTest {
     void testRefreshCycles_FrozenSkips() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setFrozenConsumed(3);
         sub.setNextRefreshTime(OffsetDateTime.now().minusDays(1));

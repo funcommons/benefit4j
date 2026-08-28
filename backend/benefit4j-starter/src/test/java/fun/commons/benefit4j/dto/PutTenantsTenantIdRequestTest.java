@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PutApplicationsAppIdRequestTest {
+public class PutTenantsTenantIdRequestTest {
     @Test
     public void testGetterSetter() {
-        PutApplicationsAppIdRequest req = new PutApplicationsAppIdRequest();
+        PutTenantsTenantIdRequest req = new PutTenantsTenantIdRequest();
         req.setName("Updated App");
         req.setStatus("INACTIVE");
         assertThat(req.getName()).isEqualTo("Updated App");

@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 public class PostingCommand {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 调用方幂等键,经 ubmx_tx_order 抢占(O10) */
     private String extOrderId;

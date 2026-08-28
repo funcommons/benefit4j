@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 public class PostReconcileRequest {
-    private Long appId;
+    private Long tenantId;
     private List<ReconcileOrder> orders;
 
     @Getter

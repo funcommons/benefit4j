@@ -35,10 +35,10 @@ framework4j:
     hash-salt: salt
     policies:
       APP:
-        key: [appid]
+        key: [tenant_id]
         expire-time: 7200
       OPS:
-        key: [appid]
+        key: [tenant_id]
         expire-time: 7200
   signature:
     enabled: false

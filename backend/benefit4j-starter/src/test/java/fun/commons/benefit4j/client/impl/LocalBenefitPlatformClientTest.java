@@ -25,31 +25,31 @@ public class LocalBenefitPlatformClientTest {
     }
 
     @Test
-    void testPostApplications() {
-        when(delegate.postApplications(any())).thenReturn(null);
-        controller.postApplications((PostApplicationsRequest) null);
-        verify(delegate).postApplications(any());
+    void testPostTenants() {
+        when(delegate.postTenants(any())).thenReturn(null);
+        controller.postTenants((PostTenantsRequest) null);
+        verify(delegate).postTenants(any());
     }
 
     @Test
-    void testGetApplications() {
-        when(delegate.getApplications()).thenReturn(null);
-        controller.getApplications();
-        verify(delegate).getApplications();
+    void testGetTenants() {
+        when(delegate.getTenants()).thenReturn(null);
+        controller.getTenants();
+        verify(delegate).getTenants();
     }
 
     @Test
-    void testPutApplicationsAppId() {
-        when(delegate.putApplicationsAppId((Long) any(), any())).thenReturn(null);
-        controller.putApplicationsAppId((Long) null, (PutApplicationsAppIdRequest) null);
-        verify(delegate).putApplicationsAppId((Long) any(), any());
+    void testPutTenantsTenantId() {
+        when(delegate.putTenantsTenantId((Long) any(), any())).thenReturn(null);
+        controller.putTenantsTenantId((Long) null, (PutTenantsTenantIdRequest) null);
+        verify(delegate).putTenantsTenantId((Long) any(), any());
     }
 
     @Test
-    void testPostApplicationsAppIdSecret() {
-        when(delegate.postApplicationsAppIdSecret((Long) any())).thenReturn(null);
-        controller.postApplicationsAppIdSecret((Long) null);
-        verify(delegate).postApplicationsAppIdSecret((Long) any());
+    void testPostTenantsTenantIdSecret() {
+        when(delegate.postTenantsTenantIdSecret((Long) any())).thenReturn(null);
+        controller.postTenantsTenantIdSecret((Long) null);
+        verify(delegate).postTenantsTenantIdSecret((Long) any());
     }
 
     @Test

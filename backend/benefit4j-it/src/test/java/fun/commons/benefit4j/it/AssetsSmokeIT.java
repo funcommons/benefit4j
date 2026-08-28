@@ -39,7 +39,7 @@ public class AssetsSmokeIT extends BaseMapperTest {
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3)).build();
 
-    private Long appId;
+    private Long tenantId;
     private String opsToken;
     private String appToken;
 
@@ -64,9 +64,8 @@ public class AssetsSmokeIT extends BaseMapperTest {
 
     private void ensureTokens() {
         if (appToken != null) return;
-        if (appId == null) appId = createApp().getId();
-        // it 模块 yml policy key=appid,app 模块 key=app_id(仓内既有不一致),双键兼容两侧
-        Map<String, Object> claims = Map.of("app_id", String.valueOf(appId), "appid", String.valueOf(appId));
+        if (tenantId == null) tenantId = createTenant().getId();
+        Map<String, Object> claims = Map.of("tenant_id", String.valueOf(tenantId));
         opsToken = tokenGenerator.generateToken("OPS", claims);
         appToken = tokenGenerator.generateToken("APP", claims);
     }
@@ -94,7 +93,7 @@ public class AssetsSmokeIT extends BaseMapperTest {
         assertThat(list.body()).contains("POINTS").contains("GOLD").contains("COMPUTE");
 
         // ② 新建资产 → 200
-        String code = "SMOKE" + uniqueAppid().substring(0, 6).toUpperCase();
+        String code = "SMOKE" + uniqueTenantid().substring(0, 6).toUpperCase();
         HttpResponse<String> create = call("POST", "/benefit/api/v1/platform/assets", appToken,
                 "{\"code\":\"" + code + "\",\"name\":\"冒烟-" + code + "\",\"asset_type\":\"VIRTUAL\",\"precision\":2}");
         assertThat(create.statusCode()).isEqualTo(200);
@@ -115,9 +114,9 @@ public class AssetsSmokeIT extends BaseMapperTest {
     @Test
     public void smoke_opsChannel_reconcile() throws Exception {
         ensureTokens();
-        // OPS token → 运维通道对账(本 appId 无流量,恒等式应成立)
+        // OPS token → 运维通道对账(本 tenantId 无流量,恒等式应成立)
         HttpResponse<String> resp = call("POST", "/benefit/api/v1/assets/ops/reconcile/run", opsToken,
-                "{\"appId\":" + appId + ",\"assetCode\":\"POINTS\"}");
+                "{\"tenantId\":" + tenantId + ",\"assetCode\":\"POINTS\"}");
         assertThat(resp.statusCode()).isEqualTo(200);
 
         // 反向验证 token 型别隔离: OPS 型 token 打 runtime(要求 APP 型)→ 拒绝

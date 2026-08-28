@@ -16,9 +16,9 @@ public class UbmaBenefitSetMapperTest extends BaseMapperTest {
 
     @Test
     public void testNewFieldsTimingModeAndQuotaUnit() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaBenefitSet set = new UbmaBenefitSet();
-        set.setAppId(appId);
+        set.setTenantId(tenantId);
         set.setName("VIP Monthly Card");
         set.setDuration(1);
         set.setDurationUnit("month");
@@ -40,9 +40,9 @@ public class UbmaBenefitSetMapperTest extends BaseMapperTest {
 
     @Test
     public void testTimingModeCurrentPeriod() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaBenefitSet set = new UbmaBenefitSet();
-        set.setAppId(appId);
+        set.setTenantId(tenantId);
         set.setName("Flash Pass");
         set.setDuration(0);
         set.setDurationUnit("day");

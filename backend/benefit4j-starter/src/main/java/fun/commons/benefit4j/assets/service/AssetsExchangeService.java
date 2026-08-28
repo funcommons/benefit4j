@@ -30,7 +30,7 @@ public class AssetsExchangeService {
         checkCapability(req.getToAssetCode());
 
         PostingCommand cmd = new PostingCommand();
-        cmd.setAppId(req.getAppId());
+        cmd.setTenantId(req.getTenantId());
         cmd.setExtOrderId(req.getOrderId());
         cmd.setTxType("EXCHANGE");
         cmd.setLegs(List.of(
@@ -50,7 +50,7 @@ public class AssetsExchangeService {
     }
 
     private void validate(ExchangeRequest req) {
-        if (req.getAppId() == null || req.getOrderId() == null || req.getOrderId().isBlank()
+        if (req.getTenantId() == null || req.getOrderId() == null || req.getOrderId().isBlank()
                 || req.getOwnerRef() == null
                 || req.getFromAssetCode() == null || req.getToAssetCode() == null
                 || req.getFromAssetCode().equals(req.getToAssetCode())

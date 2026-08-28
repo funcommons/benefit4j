@@ -20,7 +20,7 @@ public class UbmxPreConsume {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long appId;
+    private Long tenantId;
 
     /** 调用方幂等键 */
     private String requestId;

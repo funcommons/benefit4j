@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class PostApplicationsRequest {
+public class PostTenantsRequest {
     @NotBlank(message = "name不能为空")
     @Size(max = 64, message = "name最长64字符")
     private String name;

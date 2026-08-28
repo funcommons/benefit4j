@@ -1,7 +1,7 @@
 package fun.commons.benefit4j.it;
 
-import fun.commons.benefit4j.entity.UbmaApplication;
-import fun.commons.benefit4j.mapper.UbmaApplicationMapper;
+import fun.commons.benefit4j.entity.UbmaTenant;
+import fun.commons.benefit4j.mapper.UbmaTenantMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,9 +13,9 @@ import java.util.UUID;
 public abstract class BaseMapperTest {
 
     @Autowired
-    protected UbmaApplicationMapper appMapper;
+    protected UbmaTenantMapper tenantMapper;
 
-    protected String uniqueAppid() {
+    protected String uniqueTenantid() {
         return UUID.randomUUID().toString().substring(0, 8);
     }
 
@@ -23,14 +23,14 @@ public abstract class BaseMapperTest {
         return UUID.randomUUID().getMostSignificantBits() & 0x7FFFFFFFL;
     }
 
-    protected UbmaApplication createApp() {
-        String suffix = uniqueAppid();
-        UbmaApplication app = new UbmaApplication();
+    protected UbmaTenant createTenant() {
+        String suffix = uniqueTenantid();
+        UbmaTenant app = new UbmaTenant();
         app.setName("test-" + suffix);
-        app.setAppSecret("secret-" + suffix);
+        app.setTenantSecret("secret-" + suffix);
         app.setCreatedAt(OffsetDateTime.now());
         app.setUpdatedAt(OffsetDateTime.now());
-        appMapper.insert(app);
+        tenantMapper.insert(app);
         return app;
     }
 }

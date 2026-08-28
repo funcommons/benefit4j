@@ -20,10 +20,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
 
     @Test
     void testConcurrentDirectConsume_oneSucceedsOneRetriesOrPartialFail() throws Exception {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 5, 10, 5, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 5, 10, 5, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Two threads try to consume 5 each from a subscription with quota=5
         // Only one should fully succeed; the other should get partial or fail
@@ -37,10 +37,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
                 PostConsumesDirectRequest req = new PostConsumesDirectRequest();
                 req.setUserid("user-001");
                 req.setItemId(String.valueOf(itemId));
-                req.setExternalOrderId("ext-conc-" + uniqueAppid());
+                req.setExternalOrderId("ext-conc-" + uniqueTenantid());
                 req.setConsumeNum(5);
 
-                Object result = runtimeService.postConsumesDirect(appId, req);
+                Object result = runtimeService.postConsumesDirect(tenantId, req);
                 ApiResponse<?> resp = (ApiResponse<?>) result;
                 if (resp.isSuccess()) {
                     successCount.incrementAndGet();
@@ -73,10 +73,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
 
     @Test
     void testConcurrentCancelAndConsume_cancelBlocksConsume() throws Exception {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         CountDownLatch startLatch = new CountDownLatch(1);
         AtomicInteger cancelSuccess = new AtomicInteger(0);
@@ -87,9 +87,9 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
                 startLatch.await();
                 PostSubscriptionsCancelRequest req = new PostSubscriptionsCancelRequest();
                 req.setSubscribeId(subId);
-                req.setExternalOrderId("ext-conccan-" + uniqueAppid());
+                req.setExternalOrderId("ext-conccan-" + uniqueTenantid());
 
-                Object result = runtimeService.postSubscriptionsCancel(appId, req);
+                Object result = runtimeService.postSubscriptionsCancel(tenantId, req);
                 ApiResponse<?> resp = (ApiResponse<?>) result;
                 if (resp.isSuccess()) cancelSuccess.incrementAndGet();
             } catch (Exception ignored) {
@@ -102,10 +102,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
                 PostConsumesDirectRequest req = new PostConsumesDirectRequest();
                 req.setUserid("user-001");
                 req.setItemId(String.valueOf(itemId));
-                req.setExternalOrderId("ext-conccon-" + uniqueAppid());
+                req.setExternalOrderId("ext-conccon-" + uniqueTenantid());
                 req.setConsumeNum(5);
 
-                Object result = runtimeService.postConsumesDirect(appId, req);
+                Object result = runtimeService.postConsumesDirect(tenantId, req);
                 ApiResponse<?> resp = (ApiResponse<?>) result;
                 if (resp.isSuccess()) consumeSuccess.incrementAndGet();
             } catch (Exception ignored) {
@@ -135,10 +135,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
 
     @Test
     void testConcurrentReserveAndCommit_noLostUpdate() throws Exception {
-        Long appId = createApp().getId();
-        Long itemId = createBenefitItem(appId).getId();
-        Long setId = createBenefitSet(appId, 30, 10, 30, itemId).getId();
-        String subId = createSubscription(appId, "user-001", setId);
+        Long tenantId = createTenant().getId();
+        Long itemId = createBenefitItem(tenantId).getId();
+        Long setId = createBenefitSet(tenantId, 30, 10, 30, itemId).getId();
+        String subId = createSubscription(tenantId, "user-001", setId);
 
         // Two threads each reserve 10 from a subscription with quota=30
         // With optimistic locking on a single item, one may lose the version race
@@ -152,10 +152,10 @@ public class BenefitConcurrencyIT extends BaseServiceTest {
                 PostConsumesReserveRequest req = new PostConsumesReserveRequest();
                 req.setUserid("user-001");
                 req.setItemId(String.valueOf(itemId));
-                req.setExternalOrderId("ext-concrsv-" + uniqueAppid());
+                req.setExternalOrderId("ext-concrsv-" + uniqueTenantid());
                 req.setConsumeNum(10);
 
-                Object result = runtimeService.postConsumesReserve(appId, req);
+                Object result = runtimeService.postConsumesReserve(tenantId, req);
                 ApiResponse<?> resp = (ApiResponse<?>) result;
                 if (resp.isSuccess()) successCount.incrementAndGet();
             } catch (Exception ignored) {

@@ -25,7 +25,7 @@ public class UbmxAccount {
     private Long id;
 
     /** 多租户隔离: 幂等键命名空间 / 数据权限 / 对账切片 */
-    private Long appId;
+    private Long tenantId;
 
     /** USER | TENANT | MERCHANT | PLATFORM | EXTERNAL */
     private String ownerType;

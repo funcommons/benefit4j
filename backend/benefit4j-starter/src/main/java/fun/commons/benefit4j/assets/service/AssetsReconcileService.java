@@ -32,43 +32,43 @@ public class AssetsReconcileService {
 
     /** 对账单个资产(事务保证差错池与快照原子) */
     @Transactional
-    public Report runOnce(Long appId, String assetCode) {
+    public Report runOnce(Long tenantId, String assetCode) {
         int diffCount = 0;
 
         // 1. 恒等式
-        BigDecimal expected = nz(reconcileMapper.expectedNormalBalance(appId, assetCode));
-        BigDecimal actual = nz(reconcileMapper.actualNormalBalance(appId, assetCode));
+        BigDecimal expected = nz(reconcileMapper.expectedNormalBalance(tenantId, assetCode));
+        BigDecimal actual = nz(reconcileMapper.actualNormalBalance(tenantId, assetCode));
         boolean identityOk = expected.compareTo(actual) == 0;
         if (!identityOk) {
             diffCount++;
-            reconcileMapper.insertDiff(appId, "ASSET_IDENTITY", assetCode, null, expected, actual);
+            reconcileMapper.insertDiff(tenantId, "ASSET_IDENTITY", assetCode, null, expected, actual);
             log.error("[assets][对账] 资产恒等式破坏! app={} asset={} expected={} actual={}",
-                    appId, assetCode, expected, actual);
+                    tenantId, assetCode, expected, actual);
         }
 
         // 2. O14 冻结一致性(全量)
-        List<Map<String, Object>> mismatches = reconcileMapper.freezeMismatches(appId);
+        List<Map<String, Object>> mismatches = reconcileMapper.freezeMismatches(tenantId);
         boolean freezeOk = mismatches.isEmpty();
         for (Map<String, Object> m : mismatches) {
             diffCount++;
             Long accountId = ((Number) m.get("id")).longValue();
-            reconcileMapper.insertDiff(appId, "FREEZE_MISMATCH", assetCode, accountId,
+            reconcileMapper.insertDiff(tenantId, "FREEZE_MISMATCH", assetCode, accountId,
                     toDecimal(m.get("expected")), toDecimal(m.get("frozen")));
             log.error("[assets][对账] 冻结不一致(O14): app={} accountId={} expected={} actual={}",
-                    appId, accountId, m.get("expected"), m.get("frozen"));
+                    tenantId, accountId, m.get("expected"), m.get("frozen"));
         }
 
         // 3. 快照
-        reconcileMapper.writeSnapshot(appId);
+        reconcileMapper.writeSnapshot(tenantId);
 
         return new Report(identityOk, freezeOk, diffCount, expected, actual);
     }
 
     /** scheduler 入口: 全资产对账 */
-    public int runAllAssets(Long appId) {
+    public int runAllAssets(Long tenantId) {
         int totalDiffs = 0;
         for (var asset : registry.list(null, "ACTIVE")) {
-            Report r = runOnce(appId, asset.getCode());
+            Report r = runOnce(tenantId, asset.getCode());
             totalDiffs += r.diffCount();
         }
         return totalDiffs;

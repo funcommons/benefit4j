@@ -46,7 +46,7 @@ class Benefit4jApplicationTests {
     @MockBean private UbmaConsumeMapper consumeMapper;
     @MockBean private UbmaRefundMapper refundMapper;
     @MockBean private UbmaUnsubscribeMapper unsubscribeMapper;
-    @MockBean private UbmaApplicationMapper applicationMapper;
+    @MockBean private UbmaTenantMapper applicationMapper;
     @MockBean private UbmaBenefitItemMapper benefitItemMapper;
     @MockBean private UbmaCompensationMapper compensationMapper;
     @MockBean private UbmpBenefitTmplSetMapper benefitTmplSetMapper;

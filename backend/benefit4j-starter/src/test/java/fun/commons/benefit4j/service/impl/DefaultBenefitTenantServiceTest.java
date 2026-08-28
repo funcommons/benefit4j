@@ -74,7 +74,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_SubItemNotFound() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         when(subscribeMapper.selectById(1L)).thenReturn(sub);
         when(subscribeItemMapper.selectById(200L)).thenReturn(null);
 
@@ -93,7 +93,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_AddSuccess() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setQuotaLimit(30);
         sub.setVersion(0);
@@ -131,7 +131,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_ReduceSuccess() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setQuotaLimit(30);
         sub.setVersion(0);
@@ -203,7 +203,7 @@ public class DefaultBenefitTenantServiceTest {
     void testGetBenefitItemsItemId_Success() {
         UbmaBenefitItem item = new UbmaBenefitItem();
         item.setId(100L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(item);
 
         ApiResponse<?> resp = (ApiResponse<?>) service.getBenefitItemsItemId(1L, "100");
@@ -221,7 +221,7 @@ public class DefaultBenefitTenantServiceTest {
     void testPutBenefitItemsItemId_Success() {
         UbmaBenefitItem item = new UbmaBenefitItem();
         item.setId(100L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(item);
         when(benefitItemMapper.update(any(), any())).thenReturn(1);
 
@@ -235,7 +235,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDeleteBenefitItemsItemId_Success() {
         UbmaBenefitItem item = new UbmaBenefitItem();
         item.setId(100L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(item);
         when(benefitItemMapper.deleteById(100L)).thenReturn(1);
 
@@ -249,7 +249,7 @@ public class DefaultBenefitTenantServiceTest {
     void testPostBenefitSets_Success() {
         UbmaBenefitItem refItem = new UbmaBenefitItem();
         refItem.setId(100L);
-        refItem.setAppId(1L);
+        refItem.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(refItem);
 
         doReturn(1).when(benefitSetMapper).insert(any(UbmaBenefitSet.class));
@@ -282,7 +282,7 @@ public class DefaultBenefitTenantServiceTest {
     void testGetBenefitSetsSetId_Success() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         when(benefitSetMapper.selectById(10L)).thenReturn(set);
         when(benefitRefMapper.selectList(any())).thenReturn(java.util.List.of(new UbmaBenefitRef()));
 
@@ -301,7 +301,7 @@ public class DefaultBenefitTenantServiceTest {
     void testPutBenefitSetsSetId_Success() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         when(benefitSetMapper.selectById(10L)).thenReturn(set);
         when(benefitSetMapper.update(any(), any())).thenReturn(1);
 
@@ -326,13 +326,13 @@ public class DefaultBenefitTenantServiceTest {
     void testPutBenefitSetsSetId_WithItems() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         when(benefitSetMapper.selectById(10L)).thenReturn(set);
         when(benefitSetMapper.update(any(), any())).thenReturn(1);
 
         UbmaBenefitItem refItem = new UbmaBenefitItem();
         refItem.setId(100L);
-        refItem.setAppId(1L);
+        refItem.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(refItem);
         when(benefitRefMapper.delete(any())).thenReturn(0);
         doReturn(1).when(benefitRefMapper).insert(any(UbmaBenefitRef.class));
@@ -354,7 +354,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDeleteBenefitSetsSetId_Success() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         when(benefitSetMapper.selectById(10L)).thenReturn(set);
         when(subscribeMapper.selectCount(any())).thenReturn(0L);
         when(benefitSetMapper.deleteById(10L)).thenReturn(1);
@@ -377,7 +377,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDeleteBenefitSetsSetId_ActiveSubscriptionsRejects() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         when(benefitSetMapper.selectById(10L)).thenReturn(set);
         when(subscribeMapper.selectCount(any())).thenReturn(1L);
 
@@ -441,7 +441,7 @@ public class DefaultBenefitTenantServiceTest {
     void testGetUsersUseridAssets_Success() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setUserid("user-001");
         when(subscribeMapper.selectList(any())).thenReturn(java.util.List.of(sub));
         when(subscribeItemMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
@@ -454,7 +454,7 @@ public class DefaultBenefitTenantServiceTest {
     void testGetUsersUseridConsumes_Success() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         when(subscribeMapper.selectList(any())).thenReturn(java.util.List.of(sub));
         when(subscribeItemMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
 
@@ -479,7 +479,7 @@ public class DefaultBenefitTenantServiceTest {
     void testTenantPostSubscriptions_Success() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(10L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         set.setStatus("ACTIVE");
         set.setDuration(1);
         set.setDurationUnit("month");
@@ -523,7 +523,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDisableSubscription_Success() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setVersion(0);
         when(subscribeMapper.selectById(1L)).thenReturn(sub);
@@ -541,7 +541,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDisable_AlreadyCanceledRejects() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("CANCELED");
         when(subscribeMapper.selectById(1L)).thenReturn(sub);
 
@@ -556,7 +556,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_InactiveSubscriptionRejects() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("CANCELED");
         when(subscribeMapper.selectById(1L)).thenReturn(sub);
 
@@ -575,7 +575,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_ReduceBelowConsumedRejects() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setQuotaLimit(30);
         sub.setPeriodConsumed(25);
@@ -607,7 +607,7 @@ public class DefaultBenefitTenantServiceTest {
     void testCompensation_ReduceSetLevelBelowConsumedRejects() {
         UbmaSubscribe sub = new UbmaSubscribe();
         sub.setId(1L);
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         sub.setStatus("ACTIVE");
         sub.setQuotaLimit(30);
         sub.setPeriodConsumed(25);
@@ -640,7 +640,7 @@ public class DefaultBenefitTenantServiceTest {
     void testDeleteBenefitItemsItemId_HasSubscribeItemRefRejects() {
         UbmaBenefitItem item = new UbmaBenefitItem();
         item.setId(100L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         when(benefitItemMapper.selectById(100L)).thenReturn(item);
         when(subscribeItemMapper.selectCount(any())).thenReturn(1L);
 

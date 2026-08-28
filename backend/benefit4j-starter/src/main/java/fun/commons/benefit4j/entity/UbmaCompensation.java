@@ -22,8 +22,8 @@ public class UbmaCompensation {
     private Long id;
 
     @OpenId
-    @TableField("app_id")
-    private Long appId;
+    @TableField("tenant_id")
+    private Long tenantId;
 
     @OpenId
     private Long subscribeId;

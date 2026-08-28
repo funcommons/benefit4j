@@ -64,12 +64,12 @@ public class BenefitOpsController {
         boolean dryRun = req.getDryRun() != null && req.getDryRun();
 
         StringBuilder sql = new StringBuilder("SELECT count(*) FROM ubma_consume WHERE created_at < ?");
-        if (req.getAppId() != null && !req.getAppId().isBlank()) {
-            sql.append(" AND app_id = ?");
+        if (req.getTenantId() != null && !req.getTenantId().isBlank()) {
+            sql.append(" AND tenant_id = ?");
         }
         Long count;
-        if (req.getAppId() != null && !req.getAppId().isBlank()) {
-            count = jdbc.queryForObject(sql.toString(), Long.class, before, Long.parseLong(req.getAppId()));
+        if (req.getTenantId() != null && !req.getTenantId().isBlank()) {
+            count = jdbc.queryForObject(sql.toString(), Long.class, before, Long.parseLong(req.getTenantId()));
         } else {
             count = jdbc.queryForObject(sql.toString(), Long.class, before);
         }
@@ -77,9 +77,9 @@ public class BenefitOpsController {
         int deleted = 0;
         if (!dryRun && count > 0) {
             StringBuilder del = new StringBuilder("DELETE FROM ubma_consume WHERE created_at < ?");
-            if (req.getAppId() != null && !req.getAppId().isBlank()) {
-                del.append(" AND app_id = ?");
-                deleted = jdbc.update(del.toString(), before, Long.parseLong(req.getAppId()));
+            if (req.getTenantId() != null && !req.getTenantId().isBlank()) {
+                del.append(" AND tenant_id = ?");
+                deleted = jdbc.update(del.toString(), before, Long.parseLong(req.getTenantId()));
             } else {
                 deleted = jdbc.update(del.toString(), before);
             }
@@ -87,7 +87,7 @@ public class BenefitOpsController {
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("before_date", req.getBeforeDate());
-        result.put("app_id", req.getAppId());
+        result.put("tenant_id", req.getTenantId());
         result.put("dry_run", dryRun);
         result.put("archived_count", dryRun ? count : deleted);
         return ApiResponse.success(result);
@@ -103,8 +103,8 @@ public class BenefitOpsController {
         int matched = 0;
         for (PostReconcileRequest.ReconcileOrder order : req.getOrders()) {
             List<Map<String, Object>> rows = jdbc.queryForList(
-                    "SELECT status, consume_num FROM ubma_consume WHERE external_order_id = ? AND app_id = ? AND is_deleted = 0",
-                    order.getExternalOrderId(), req.getAppId());
+                    "SELECT status, consume_num FROM ubma_consume WHERE external_order_id = ? AND tenant_id = ? AND is_deleted = 0",
+                    order.getExternalOrderId(), req.getTenantId());
             if (rows.isEmpty()) {
                 Map<String, Object> diff = new LinkedHashMap<>();
                 diff.put("external_order_id", order.getExternalOrderId());

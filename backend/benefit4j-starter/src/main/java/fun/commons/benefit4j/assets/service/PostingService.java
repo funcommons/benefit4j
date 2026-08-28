@@ -93,7 +93,7 @@ public class PostingService {
         Long txId = IdWorker.getId();
         UbmxTxOrder gate = new UbmxTxOrder();
         gate.setId(IdWorker.getId());
-        gate.setAppId(cmd.getAppId());
+        gate.setTenantId(cmd.getTenantId());
         gate.setExtOrderId(cmd.getExtOrderId());
         gate.setTxType(cmd.getTxType());
         gate.setTxId(txId);
@@ -134,8 +134,8 @@ public class PostingService {
         Map<Long, BigDecimal> delta = new TreeMap<>();
         for (int i = 0; i < n; i++) {
             PostingCommand.LegSpec leg = specs.get(i);
-            src[i] = accountService.resolveRef(cmd.getAppId(), leg.getSrc(), leg.getAssetCode());
-            dst[i] = accountService.resolveRef(cmd.getAppId(), leg.getDst(), leg.getAssetCode());
+            src[i] = accountService.resolveRef(cmd.getTenantId(), leg.getSrc(), leg.getAssetCode());
+            dst[i] = accountService.resolveRef(cmd.getTenantId(), leg.getDst(), leg.getAssetCode());
             // 资产恒等: 腿两侧账户必须是同一资产(引擎兜底校验)
             if (!leg.getAssetCode().equals(src[i].getAssetCode())
                     || !leg.getAssetCode().equals(dst[i].getAssetCode())) {
@@ -199,7 +199,7 @@ public class PostingService {
             }
 
             UbmxPosting p = new UbmxPosting();
-            p.setAppId(cmd.getAppId());
+            p.setTenantId(cmd.getTenantId());
             p.setTxId(txId);
             p.setTxType(cmd.getTxType());
             p.setExtOrderId(cmd.getExtOrderId());
@@ -265,7 +265,7 @@ public class PostingService {
     private PostingResult replayOrConflict(PostingCommand cmd, String fingerprint) {
         UbmxTxOrder old = txOrderMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UbmxTxOrder>()
-                        .eq(UbmxTxOrder::getAppId, cmd.getAppId())
+                        .eq(UbmxTxOrder::getTenantId, cmd.getTenantId())
                         .eq(UbmxTxOrder::getExtOrderId, cmd.getExtOrderId()));
         if (old == null) {
             // 并发窗口极小: 唯一键冲突但行不可见,按冲突处理
@@ -341,8 +341,8 @@ public class PostingService {
     // ---------- 校验与指纹 ----------
 
     private void validate(PostingCommand cmd) {
-        if (cmd.getAppId() == null || cmd.getExtOrderId() == null || cmd.getExtOrderId().isBlank()) {
-            throw new AssetsException(AssetsException.ASSET_INVALID, "appId/extOrderId 必填");
+        if (cmd.getTenantId() == null || cmd.getExtOrderId() == null || cmd.getExtOrderId().isBlank()) {
+            throw new AssetsException(AssetsException.ASSET_INVALID, "tenantId/extOrderId 必填");
         }
         if (cmd.getTxType() == null || cmd.getTxType().isBlank()) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "txType 必填");
@@ -362,7 +362,7 @@ public class PostingService {
     /** 规范化请求指纹: 同键异参判据(Stripe request fingerprint 思路) */
     private String fingerprint(PostingCommand cmd) {
         StringBuilder sb = new StringBuilder();
-        sb.append(cmd.getAppId()).append('|')
+        sb.append(cmd.getTenantId()).append('|')
                 .append(cmd.getTxType()).append('|');
         for (PostingCommand.LegSpec leg : cmd.getLegs()) {
             sb.append(leg.getSrc()).append('>')

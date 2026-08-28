@@ -19,28 +19,28 @@ public class RemoteBenefitPlatformClient extends AbstractRemoteBenefitClient imp
     }
 
     @Override
-    public Object postApplications(PostApplicationsRequest req) {
-        return invoke("/benefit/api/v1/platform/applications", "POST", null, req);
+    public Object postTenants(PostTenantsRequest req) {
+        return invoke("/benefit/api/v1/platform/tenants", "POST", null, req);
     }
 
     @Override
-    public Object getApplications() {
-        return invoke("/benefit/api/v1/platform/applications", "GET", null, null);
+    public Object getTenants() {
+        return invoke("/benefit/api/v1/platform/tenants", "GET", null, null);
     }
 
     @Override
-    public Object putApplicationsAppId(Long appId, PutApplicationsAppIdRequest req) {
-        return invoke("/benefit/api/v1/platform/applications/" + appId, "PUT", null, req);
+    public Object putTenantsTenantId(Long tenantId, PutTenantsTenantIdRequest req) {
+        return invoke("/benefit/api/v1/platform/tenants/" + tenantId, "PUT", null, req);
     }
 
     @Override
-    public Object postApplicationsAppIdSecret(Long appId) {
-        return invoke("/benefit/api/v1/platform/applications/" + appId + "/reset-secret", "POST", null, null);
+    public Object postTenantsTenantIdSecret(Long tenantId) {
+        return invoke("/benefit/api/v1/platform/tenants/" + tenantId + "/reset-secret", "POST", null, null);
     }
 
     @Override
-    public Object getApplicationsAppIdSecret(Long appId) {
-        return invoke("/benefit/api/v1/platform/applications/" + appId + "/secret", "GET", null, null);
+    public Object getTenantsTenantIdSecret(Long tenantId) {
+        return invoke("/benefit/api/v1/platform/tenants/" + tenantId + "/secret", "GET", null, null);
     }
 
     @Override
@@ -69,23 +69,23 @@ public class RemoteBenefitPlatformClient extends AbstractRemoteBenefitClient imp
     }
 
     @Override
-    public Object getPlatformItems(Long appId, String status, String keyword,
+    public Object getPlatformItems(Long tenantId, String status, String keyword,
                                    OffsetDateTime createdAtStart, OffsetDateTime createdAtEnd,
                                    Integer page, Integer size) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId)); q.put("status", status); q.put("keyword", keyword);
+        q.put("tenant_id", toStr(tenantId)); q.put("status", status); q.put("keyword", keyword);
         q.put("created_at_start", toStr(createdAtStart)); q.put("created_at_end", toStr(createdAtEnd));
         q.put("page", toStr(page)); q.put("size", toStr(size));
         return invoke("/benefit/api/v1/platform/items", "GET", null, null, q);
     }
 
     @Override
-    public Object getPlatformBenefitSets(Long appId, String status, String keyword,
+    public Object getPlatformBenefitSets(Long tenantId, String status, String keyword,
                                          Integer priorityMin, Integer priorityMax,
                                          OffsetDateTime createdAtStart, OffsetDateTime createdAtEnd,
                                          Integer page, Integer size) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId)); q.put("status", status); q.put("keyword", keyword);
+        q.put("tenant_id", toStr(tenantId)); q.put("status", status); q.put("keyword", keyword);
         q.put("priority_min", toStr(priorityMin)); q.put("priority_max", toStr(priorityMax));
         q.put("created_at_start", toStr(createdAtStart)); q.put("created_at_end", toStr(createdAtEnd));
         q.put("page", toStr(page)); q.put("size", toStr(size));
@@ -113,13 +113,13 @@ public class RemoteBenefitPlatformClient extends AbstractRemoteBenefitClient imp
     }
 
     @Override
-    public Object getPlatformSubscriptions(Long appId, String userid, String setId, String status,
+    public Object getPlatformSubscriptions(Long tenantId, String userid, String setId, String status,
                                           String externalOrderId, String keyword,
                                           OffsetDateTime dateBeginStart, OffsetDateTime dateBeginEnd,
                                           OffsetDateTime createdAtStart, OffsetDateTime createdAtEnd,
                                           Integer page, Integer size) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId)); q.put("userid", userid); q.put("set_id", setId);
+        q.put("tenant_id", toStr(tenantId)); q.put("userid", userid); q.put("set_id", setId);
         q.put("status", status); q.put("external_order_id", externalOrderId); q.put("keyword", keyword);
         q.put("date_begin_start", toStr(dateBeginStart)); q.put("date_begin_end", toStr(dateBeginEnd));
         q.put("created_at_start", toStr(createdAtStart)); q.put("created_at_end", toStr(createdAtEnd));
@@ -128,20 +128,20 @@ public class RemoteBenefitPlatformClient extends AbstractRemoteBenefitClient imp
     }
 
     @Override
-    public Object getPlatformSubscriptionsSubscribeIdItems(Long appId, String subscribeId, String itemId) {
+    public Object getPlatformSubscriptionsSubscribeIdItems(Long tenantId, String subscribeId, String itemId) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId)); q.put("item_id", itemId);
+        q.put("tenant_id", toStr(tenantId)); q.put("item_id", itemId);
         return invoke("/benefit/api/v1/platform/subscriptions/" + subscribeId + "/items", "GET", null, null, q);
     }
 
     @Override
-    public Object getPlatformConsumes(Long appId, String userid, String subsItemId, String itemId, String status,
+    public Object getPlatformConsumes(Long tenantId, String userid, String subsItemId, String itemId, String status,
                                       String externalOrderId, String keyword,
                                       Integer consumeNumMin, Integer consumeNumMax,
                                       OffsetDateTime consumeTimeStart, OffsetDateTime consumeTimeEnd,
                                       Integer page, Integer size) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId)); q.put("userid", userid); q.put("subs_item_id", subsItemId);
+        q.put("tenant_id", toStr(tenantId)); q.put("userid", userid); q.put("subs_item_id", subsItemId);
         q.put("item_id", itemId); q.put("status", status); q.put("external_order_id", externalOrderId);
         q.put("keyword", keyword); q.put("consume_num_min", toStr(consumeNumMin)); q.put("consume_num_max", toStr(consumeNumMax));
         q.put("consume_time_start", toStr(consumeTimeStart)); q.put("consume_time_end", toStr(consumeTimeEnd));
@@ -150,9 +150,9 @@ public class RemoteBenefitPlatformClient extends AbstractRemoteBenefitClient imp
     }
 
     @Override
-    public Object postPlatformConsumesIdRefund(Long appId, String consumeId, PostConsumesIdRefundRequest req) {
+    public Object postPlatformConsumesIdRefund(Long tenantId, String consumeId, PostConsumesIdRefundRequest req) {
         Map<String, String> q = new LinkedHashMap<>();
-        q.put("app_id", toStr(appId));
+        q.put("tenant_id", toStr(tenantId));
         return invoke("/benefit/api/v1/platform/consumes/" + consumeId + "/refund", "POST", null, req, q);
     }
 

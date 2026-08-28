@@ -21,7 +21,7 @@ public interface UbmxAccountMapper extends BaseMapper<UbmxAccount> {
      */
     @Select("<script>"
             + "/*traceid=assets,topic=posting_lock*/ "
-            + "SELECT id, app_id, owner_type, owner_id, asset_code, account_type, balance, "
+            + "SELECT id, tenant_id, owner_type, owner_id, asset_code, account_type, balance, "
             + "credit_limit, frozen, version, status, ext, created_at, updated_at "
             + "FROM ubmx_account WHERE id IN "
             + "<foreach collection='ids' item='i' open='(' separator=',' close=')'>#{i}</foreach> "
@@ -56,9 +56,9 @@ public interface UbmxAccountMapper extends BaseMapper<UbmxAccount> {
      * extJson 由调用方序列化(连接串 stringtype=unspecified,String 可直写 jsonb)。
      */
     @Insert("/*traceid=assets,topic=account_open*/ "
-            + "INSERT INTO ubmx_account (id, app_id, owner_type, owner_id, asset_code, account_type, "
+            + "INSERT INTO ubmx_account (id, tenant_id, owner_type, owner_id, asset_code, account_type, "
             + "balance, credit_limit, frozen, version, status, ext) "
-            + "VALUES (#{acc.id}, #{acc.appId}, #{acc.ownerType}, #{acc.ownerId}, #{acc.assetCode}, "
+            + "VALUES (#{acc.id}, #{acc.tenantId}, #{acc.ownerType}, #{acc.ownerId}, #{acc.assetCode}, "
             + "#{acc.accountType}, #{acc.balance}, #{acc.creditLimit}, #{acc.frozen}, 0, #{acc.status}, #{extJson}) "
             + "ON CONFLICT DO NOTHING")
     int insertIgnore(@Param("acc") UbmxAccount acc, @Param("extJson") String extJson);

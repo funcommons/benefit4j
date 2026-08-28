@@ -32,20 +32,20 @@ public class RemoteBenefitPlatformClientTest {
     }
 
     @Test
-    void testPostApplications() {
-        Object result = instance.postApplications((fun.commons.benefit4j.dto.PostApplicationsRequest) null);
+    void testPostTenants() {
+        Object result = instance.postTenants((fun.commons.benefit4j.dto.PostTenantsRequest) null);
         assertThat(result).isNotNull();
     }
 
     @Test
-    void testGetApplications() {
-        Object result = instance.getApplications();
+    void testGetTenants() {
+        Object result = instance.getTenants();
         assertThat(result).isNotNull();
     }
 
     @Test
-    void testPutApplicationsAppId() {
-        Object result = instance.putApplicationsAppId((Long) null, (fun.commons.benefit4j.dto.PutApplicationsAppIdRequest) null);
+    void testPutTenantsTenantId() {
+        Object result = instance.putTenantsTenantId((Long) null, (fun.commons.benefit4j.dto.PutTenantsTenantIdRequest) null);
         assertThat(result).isNotNull();
     }
 

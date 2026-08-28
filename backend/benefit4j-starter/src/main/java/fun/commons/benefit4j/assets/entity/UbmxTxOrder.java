@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * 幂等闸(O10)。不分区小表,UNIQUE(app_id, ext_order_id) 是真正的幂等闸;
+ * 幂等闸(O10)。不分区小表,UNIQUE(tenant_id, ext_order_id) 是真正的幂等闸;
  * PostingService 事务第一步 INSERT 抢占,冲突读旧行:
  * 同参返回 result_snapshot,异参抛 IDEMPOTENCY_CONFLICT。
  */
@@ -21,7 +21,7 @@ public class UbmxTxOrder {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long appId;
+    private Long tenantId;
 
     /** 调用方幂等键(issueOrderId / requestId) */
     private String extOrderId;

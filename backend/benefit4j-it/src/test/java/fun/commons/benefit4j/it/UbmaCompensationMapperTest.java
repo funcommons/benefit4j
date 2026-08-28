@@ -16,9 +16,9 @@ public class UbmaCompensationMapperTest extends BaseMapperTest {
 
     @Test
     public void testInsertAndSelect() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaCompensation comp = new UbmaCompensation();
-        comp.setAppId(appId);
+        comp.setTenantId(tenantId);
         comp.setSubscribeId(100L);
         comp.setSubsItemId(200L);
         comp.setItemId(300L);
@@ -35,7 +35,7 @@ public class UbmaCompensationMapperTest extends BaseMapperTest {
 
         UbmaCompensation db = mapper.selectById(comp.getId());
         assertThat(db).isNotNull();
-        assertThat(db.getAppId()).isEqualTo(appId);
+        assertThat(db.getTenantId()).isEqualTo(tenantId);
         assertThat(db.getAdjustNum()).isEqualTo(5);
         assertThat(db.getAdjustType()).isEqualTo("ADD");
         assertThat(db.getOperator()).isEqualTo("cs-agent-001");
@@ -43,9 +43,9 @@ public class UbmaCompensationMapperTest extends BaseMapperTest {
 
     @Test
     public void testReduceAdjustType() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaCompensation comp = new UbmaCompensation();
-        comp.setAppId(appId);
+        comp.setTenantId(tenantId);
         comp.setSubscribeId(101L);
         comp.setSubsItemId(201L);
         comp.setItemId(301L);

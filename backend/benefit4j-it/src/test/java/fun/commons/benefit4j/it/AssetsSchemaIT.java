@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 断言与 documents/assets-design.md v0.4 §2 一致,防止后续 schema 变更悄悄回退:
  *   1) 六表 (ubmx_asset/account/posting/tx_order/pre_consume/freeze) 存在 + 关键列;
  *   2) 资金安全 CHECK: account (BOUNDARY OR balance >= -credit_limit) / posting(amount > 0);
- *   3) 幂等闸: tx_order UNIQUE(app_id, ext_order_id) —— O10,且 posting 上【无】该唯一键(防回退);
+ *   3) 幂等闸: tx_order UNIQUE(tenant_id, ext_order_id) —— O10,且 posting 上【无】该唯一键(防回退);
  *   4) posting 为原生 RANGE 分区表 + 当月/下月/default 分区 (O1);
  *   5) 部分索引: pre_consume(expire WHERE RESERVED) / freeze(account WHERE ACTIVE);
  *   6) 种子: 3 个 VIRTUAL 资产 (POINTS/GOLD/COMPUTE),无 FIAT 种子(FIAT fail-fast 前置,A4 依赖)。
@@ -57,20 +57,20 @@ public class AssetsSchemaIT {
                 "can_transfer", "can_exchange", "can_credit", "issue_mode", "expire_policy",
                 "limit_policy", "status"});
         expected.put("ubmx_account", new String[]{
-                "id", "app_id", "owner_type", "owner_id", "asset_code", "account_type",
+                "id", "tenant_id", "owner_type", "owner_id", "asset_code", "account_type",
                 "balance", "credit_limit", "frozen", "version", "status", "ext"});
         expected.put("ubmx_posting", new String[]{
-                "id", "app_id", "tx_id", "tx_type", "ext_order_id", "leg_seq",
+                "id", "tenant_id", "tx_id", "tx_type", "ext_order_id", "leg_seq",
                 "src_account_id", "dst_account_id", "asset_code", "amount", "direction",
                 "balance_after", "status", "ext", "created_at"});
         expected.put("ubmx_tx_order", new String[]{
-                "id", "app_id", "ext_order_id", "tx_type", "tx_id", "status", "result_snapshot"});
+                "id", "tenant_id", "ext_order_id", "tx_type", "tx_id", "status", "result_snapshot"});
         expected.put("ubmx_pre_consume", new String[]{
-                "id", "app_id", "request_id", "tx_id", "charge_mode", "user_account_id",
+                "id", "tenant_id", "request_id", "tx_id", "charge_mode", "user_account_id",
                 "tenant_account_id", "asset_code", "estimated", "settled_amount", "status",
                 "expire_time"});
         expected.put("ubmx_freeze", new String[]{
-                "id", "app_id", "account_id", "freeze_no", "reason", "amount", "used_amount",
+                "id", "tenant_id", "account_id", "freeze_no", "reason", "amount", "used_amount",
                 "status", "expire_time", "ext"});
 
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
@@ -97,10 +97,10 @@ public class AssetsSchemaIT {
                     d -> d.contains("frozen") && d.contains(">="));
             assertThat(frozenDef).as("account frozen >= 0 CHECK").isNotNull();
 
-            // UNIQUE(app_id, owner_type, owner_id, asset_code) 账户唯一
+            // UNIQUE(tenant_id, owner_type, owner_id, asset_code) 账户唯一
             String uk = constraintDef(conn, "ubmx_account", "u", d -> true);
-            assertThat(uk).as("account UNIQUE(app_id, owner_type, owner_id, asset_code)")
-                    .contains("app_id").contains("owner_type").contains("owner_id").contains("asset_code");
+            assertThat(uk).as("account UNIQUE(tenant_id, owner_type, owner_id, asset_code)")
+                    .contains("tenant_id").contains("owner_type").contains("owner_id").contains("asset_code");
         }
     }
 
@@ -119,12 +119,12 @@ public class AssetsSchemaIT {
 
     @Test
     void testIdempotencyGateOnTxOrder_notOnPosting() throws Exception {
-        // O10: 幂等闸必须在 tx_order(不分区小表) UNIQUE(app_id, ext_order_id);
-        //      posting(分区表)上【不得】有 app_id+ext_order_id 唯一键(分区键会稀释幂等)
+        // O10: 幂等闸必须在 tx_order(不分区小表) UNIQUE(tenant_id, ext_order_id);
+        //      posting(分区表)上【不得】有 tenant_id+ext_order_id 唯一键(分区键会稀释幂等)
         try (Connection conn = DriverManager.getConnection(url, user, pass)) {
             String txUk = constraintDef(conn, "ubmx_tx_order", "u", d -> true);
-            assertThat(txUk).as("tx_order UNIQUE(app_id, ext_order_id)")
-                    .contains("app_id").contains("ext_order_id");
+            assertThat(txUk).as("tx_order UNIQUE(tenant_id, ext_order_id)")
+                    .contains("tenant_id").contains("ext_order_id");
 
             String postingUk = constraintDef(conn, "ubmx_posting", "u",
                     d -> d.contains("ext_order_id"));

@@ -41,17 +41,17 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
     @Autowired
     private AssetsIdempotencyService idempotencyService;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     private void seedTraffic(Long uid) {
-        postingService.commitTx(cmd("IT-REC-SEED-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-REC-SEED-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "200")));
-        postingService.commitTx(cmd("IT-REC-SPEND-" + uniqueAppid(), "CONSUME",
+        postingService.commitTx(cmd("IT-REC-SPEND-" + uniqueTenantid(), "CONSUME",
                 leg("user:" + uid, "fee:POINTS", "POINTS", "30")));   // NORMAL→BOUNDARY 30
     }
 
@@ -84,11 +84,11 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
     @Test
     public void testFreezeConsistencyInReconcile() throws Exception {
         Long uid = uniqueLongId();
-        postingService.commitTx(cmd("IT-REC-FZ-F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-REC-FZ-F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "100")));
         var req = new fun.commons.benefit4j.assets.dto.FreezeRequest();
-        req.setAppId(app());
-        req.setFreezeNo("IT-REC-FZ-" + uniqueAppid());
+        req.setTenantId(app());
+        req.setFreezeNo("IT-REC-FZ-" + uniqueTenantid());
         req.setAccountRef("user:" + uid);
         req.setAssetCode("POINTS");
         req.setAmount(new BigDecimal("40"));
@@ -127,7 +127,7 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
 
     @Test
     public void testOutboxEventOnCommitTx() throws Exception {
-        String order = "IT-OBX-" + uniqueAppid();
+        String order = "IT-OBX-" + uniqueTenantid();
         postingService.commitTx(cmd(order, "ISSUE",
                 leg("issue:POINTS", "user:" + uniqueLongId(), "POINTS", "5")));
 
@@ -145,7 +145,7 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
 
     @Test
     public void testIdempotencyRelease_isolatesKey() throws Exception {
-        String order = "IT-REL-1-" + uniqueAppid();
+        String order = "IT-REL-1-" + uniqueTenantid();
         Long uid = uniqueLongId();
         postingService.commitTx(cmd(order, "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "10")));
@@ -161,7 +161,7 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
                 .isEqualTo(AssetsException.IDEMPOTENCY_CONFLICT);
 
         // 新号正常;且不重复入账(余额仍 10)
-        postingService.commitTx(cmd("IT-REL-2-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-REL-2-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", "5")));
         try (var conn = AssetsMigrations.open();
              var ps = conn.prepareStatement(
@@ -179,7 +179,7 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
     private Long accountIdOf(Long uid) throws Exception {
         try (var conn = AssetsMigrations.open();
              var ps = conn.prepareStatement(
-                     "SELECT id FROM ubmx_account WHERE app_id = ? AND owner_type = 'USER' "
+                     "SELECT id FROM ubmx_account WHERE tenant_id = ? AND owner_type = 'USER' "
                              + "AND owner_id = ? AND asset_code = 'POINTS'")) {
             ps.setLong(1, app());
             ps.setLong(2, uid);
@@ -192,7 +192,7 @@ public class ReconcileAndOpsIT extends BaseMapperTest {
 
     private PostingCommand cmd(String orderId, String txType, PostingCommand.LegSpec... legs) {
         PostingCommand c = new PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

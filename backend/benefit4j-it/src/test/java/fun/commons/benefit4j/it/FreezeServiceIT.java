@@ -41,11 +41,11 @@ public class FreezeServiceIT extends BaseMapperTest {
     @Autowired
     private AccountService accountService;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     private fun.commons.benefit4j.assets.entity.UbmxAccount account(Long uid) {
@@ -53,13 +53,13 @@ public class FreezeServiceIT extends BaseMapperTest {
     }
 
     private void fund(Long uid, String amount) {
-        postingService.commitTx(cmd("IT-FRZ-F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-FRZ-F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + uid, "POINTS", amount)));
     }
 
     private FreezeRequest freeze(Long uid, String freezeNo, String amount, String reason) {
         FreezeRequest r = new FreezeRequest();
-        r.setAppId(app());
+        r.setTenantId(app());
         r.setFreezeNo(freezeNo);
         r.setAccountRef("user:" + uid);
         r.setAssetCode("POINTS");
@@ -70,7 +70,7 @@ public class FreezeServiceIT extends BaseMapperTest {
 
     private UnfreezeRequest unfreeze(String freezeNo, String mode, String amount) {
         UnfreezeRequest r = new UnfreezeRequest();
-        r.setAppId(app());
+        r.setTenantId(app());
         r.setFreezeNo(freezeNo);
         r.setMode(mode);
         r.setAmount(amount == null ? null : new BigDecimal(amount));
@@ -82,7 +82,7 @@ public class FreezeServiceIT extends BaseMapperTest {
         Long uid = uniqueLongId();
         fund(uid, "100");
 
-        FreezeView v = freezeService.freeze(freeze(uid, "IT-FRZ-1-" + uniqueAppid(), "30", "AFTER_SALE"));
+        FreezeView v = freezeService.freeze(freeze(uid, "IT-FRZ-1-" + uniqueTenantid(), "30", "AFTER_SALE"));
 
         assertThat(v.getStatus()).isEqualTo("ACTIVE");
         var acc = account(uid);
@@ -94,7 +94,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testFreeze_idempotentByFreezeNo() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String no = "IT-FRZ-2-" + uniqueAppid();
+        String no = "IT-FRZ-2-" + uniqueTenantid();
         var req = freeze(uid, no, "30", "RISK");
 
         FreezeView first = freezeService.freeze(req);
@@ -108,7 +108,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testFreeze_insufficientRejected() {
         Long uid = uniqueLongId();
         fund(uid, "10");
-        assertThatThrownBy(() -> freezeService.freeze(freeze(uid, "IT-FRZ-3-" + uniqueAppid(), "30", "RISK")))
+        assertThatThrownBy(() -> freezeService.freeze(freeze(uid, "IT-FRZ-3-" + uniqueTenantid(), "30", "RISK")))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.INSUFFICIENT_BALANCE);
@@ -120,7 +120,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testFreeze_invalidReasonRejected() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        assertThatThrownBy(() -> freezeService.freeze(freeze(uid, "IT-FRZ-4-" + uniqueAppid(), "10", "WHATEVER")))
+        assertThatThrownBy(() -> freezeService.freeze(freeze(uid, "IT-FRZ-4-" + uniqueTenantid(), "10", "WHATEVER")))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.ASSET_INVALID);
@@ -130,7 +130,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testUnfreezeRelease_full() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String no = "IT-FRZ-5-" + uniqueAppid();
+        String no = "IT-FRZ-5-" + uniqueTenantid();
         freezeService.freeze(freeze(uid, no, "30", "AFTER_SALE"));
 
         FreezeView v = freezeService.unfreeze(unfreeze(no, "RELEASE", null));
@@ -145,7 +145,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testUnfreezeRelease_partialThenFull() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String no = "IT-FRZ-6-" + uniqueAppid();
+        String no = "IT-FRZ-6-" + uniqueTenantid();
         freezeService.freeze(freeze(uid, no, "30", "RISK"));
 
         // 部分释放 10: 70+10=80, frozen 20, 仍 ACTIVE
@@ -167,7 +167,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testUnfreezeConsume_withdrawSemantics() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String no = "IT-FRZ-7-" + uniqueAppid();
+        String no = "IT-FRZ-7-" + uniqueTenantid();
         freezeService.freeze(freeze(uid, no, "30", "WITHDRAW"));
 
         FreezeView v = freezeService.unfreeze(unfreeze(no, "CONSUME", null));
@@ -183,7 +183,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testUnfreeze_idempotentAndUnknown() {
         Long uid = uniqueLongId();
         fund(uid, "100");
-        String no = "IT-FRZ-8-" + uniqueAppid();
+        String no = "IT-FRZ-8-" + uniqueTenantid();
         freezeService.freeze(freeze(uid, no, "30", "AFTER_SALE"));
         freezeService.unfreeze(unfreeze(no, "RELEASE", null));
 
@@ -193,7 +193,7 @@ public class FreezeServiceIT extends BaseMapperTest {
         assertThat(account(uid).getBalance()).isEqualByComparingTo("100");
 
         // 不存在
-        assertThatThrownBy(() -> freezeService.unfreeze(unfreeze("NO-SUCH-" + uniqueAppid(), "RELEASE", null)))
+        assertThatThrownBy(() -> freezeService.unfreeze(unfreeze("NO-SUCH-" + uniqueTenantid(), "RELEASE", null)))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
                 .isEqualTo(AssetsException.FREEZE_NOT_FOUND);
@@ -203,8 +203,8 @@ public class FreezeServiceIT extends BaseMapperTest {
     public void testO14Consistency() throws Exception {
         Long uid = uniqueLongId();
         fund(uid, "200");
-        String no1 = "IT-FRZ-9A-" + uniqueAppid();
-        String no2 = "IT-FRZ-9B-" + uniqueAppid();
+        String no1 = "IT-FRZ-9A-" + uniqueTenantid();
+        String no2 = "IT-FRZ-9B-" + uniqueTenantid();
         freezeService.freeze(freeze(uid, no1, "50", "RISK"));
         freezeService.freeze(freeze(uid, no2, "30", "AFTER_SALE"));
         freezeService.unfreeze(unfreeze(no2, "RELEASE", "10"));   // no2 剩 20
@@ -226,7 +226,7 @@ public class FreezeServiceIT extends BaseMapperTest {
     private fun.commons.benefit4j.assets.dto.PostingCommand cmd(String orderId, String txType,
             fun.commons.benefit4j.assets.dto.PostingCommand.LegSpec... legs) {
         fun.commons.benefit4j.assets.dto.PostingCommand c = new fun.commons.benefit4j.assets.dto.PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

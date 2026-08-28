@@ -18,96 +18,96 @@ public class BenefitTenantController {
     @PostMapping("/benefit/api/v1/tenant/benefit-items")
     public Object postBenefitItems(
             @Valid @RequestBody fun.commons.benefit4j.dto.PostBenefitItemsRequest req) {
-        return client.postBenefitItems(appId(), req);
+        return client.postBenefitItems(tenantId(), req);
     }
 
     @GetMapping("/benefit/api/v1/tenant/benefit-items")
     public Object getBenefitItems() {
-        return client.getBenefitItems(appId());
+        return client.getBenefitItems(tenantId());
     }
 
     @GetMapping("/benefit/api/v1/tenant/benefit-items/{item_id}")
     public Object getBenefitItemsItemId(
             @PathVariable("item_id") String itemId) {
-        return client.getBenefitItemsItemId(appId(), itemId);
+        return client.getBenefitItemsItemId(tenantId(), itemId);
     }
 
     @PutMapping("/benefit/api/v1/tenant/benefit-items/{item_id}")
     public Object putBenefitItemsItemId(
             @PathVariable("item_id") String itemId,
             @Valid @RequestBody fun.commons.benefit4j.dto.PutBenefitItemsItemIdRequest req) {
-        return client.putBenefitItemsItemId(appId(), itemId, req);
+        return client.putBenefitItemsItemId(tenantId(), itemId, req);
     }
 
     @DeleteMapping("/benefit/api/v1/tenant/benefit-items/{item_id}")
     public Object deleteBenefitItemsItemId(
             @PathVariable("item_id") String itemId) {
-        return client.deleteBenefitItemsItemId(appId(), itemId);
+        return client.deleteBenefitItemsItemId(tenantId(), itemId);
     }
 
     @GetMapping("/benefit/api/v1/tenant/benefit-templates")
     public Object getBenefitTemplates() {
-        return client.getBenefitTemplates(appId());
+        return client.getBenefitTemplates(tenantId());
     }
 
     @PostMapping("/benefit/api/v1/tenant/benefit-sets")
     public Object postBenefitSets(
             @Valid @RequestBody fun.commons.benefit4j.dto.PostBenefitSetsRequest req) {
-        return client.postBenefitSets(appId(), req);
+        return client.postBenefitSets(tenantId(), req);
     }
 
     @GetMapping("/benefit/api/v1/tenant/benefit-sets")
     public Object getBenefitSets() {
-        return client.getBenefitSets(appId());
+        return client.getBenefitSets(tenantId());
     }
 
     @GetMapping("/benefit/api/v1/tenant/benefit-sets/{set_id}")
     public Object getBenefitSetsSetId(
             @PathVariable("set_id") String setId) {
-        return client.getBenefitSetsSetId(appId(), setId);
+        return client.getBenefitSetsSetId(tenantId(), setId);
     }
 
     @PutMapping("/benefit/api/v1/tenant/benefit-sets/{set_id}")
     public Object putBenefitSetsSetId(
             @PathVariable("set_id") String setId,
             @Valid @RequestBody fun.commons.benefit4j.dto.PutBenefitSetsSetIdRequest req) {
-        return client.putBenefitSetsSetId(appId(), setId, req);
+        return client.putBenefitSetsSetId(tenantId(), setId, req);
     }
 
     @DeleteMapping("/benefit/api/v1/tenant/benefit-sets/{set_id}")
     public Object deleteBenefitSetsSetId(
             @PathVariable("set_id") String setId) {
-        return client.deleteBenefitSetsSetId(appId(), setId);
+        return client.deleteBenefitSetsSetId(tenantId(), setId);
     }
 
     @GetMapping("/benefit/api/v1/tenant/users/{userid}/assets")
     public Object getUsersUseridAssets(
             @PathVariable("userid") String userid) {
-        return client.getUsersUseridAssets(appId(), userid);
+        return client.getUsersUseridAssets(tenantId(), userid);
     }
 
     @GetMapping("/benefit/api/v1/tenant/users/{userid}/consumes")
     public Object getUsersUseridConsumes(
             @PathVariable("userid") String userid) {
-        return client.getUsersUseridConsumes(appId(), userid);
+        return client.getUsersUseridConsumes(tenantId(), userid);
     }
 
     @PostMapping("/benefit/api/v1/tenant/subscriptions")
     public Object postSubscriptions(
             @Valid @RequestBody fun.commons.benefit4j.dto.PostSubscriptionsRequest req) {
-        return client.postSubscriptions(appId(), req);
+        return client.postSubscriptions(tenantId(), req);
     }
 
     /** 批量发放订阅 (运营活动 N 用户一次, 循环 + 幂等 external_order_id) */
     @PostMapping("/benefit/api/v1/tenant/subscriptions/batch")
     public Object postSubscriptionsBatch(
             @RequestBody java.util.List<fun.commons.benefit4j.dto.PostSubscriptionsRequest> requests) {
-        Long appId = appId();
+        Long tenantId = tenantId();
         java.util.List<Object> results = new java.util.ArrayList<>();
         int success = 0, failed = 0;
         for (fun.commons.benefit4j.dto.PostSubscriptionsRequest req : requests) {
             try {
-                results.add(client.postSubscriptions(appId, req));
+                results.add(client.postSubscriptions(tenantId, req));
                 success++;
             } catch (Exception e) {
                 java.util.Map<String, Object> err = new java.util.LinkedHashMap<>();
@@ -129,20 +129,20 @@ public class BenefitTenantController {
     public Object postSubscriptionsSubscribeIdDisable(
             @PathVariable("subscribe_id") String subscribeId,
             @Valid @RequestBody fun.commons.benefit4j.dto.PostSubscriptionsSubscribeIdDisableRequest req) {
-        return client.postSubscriptionsSubscribeIdDisable(appId(), subscribeId, req);
+        return client.postSubscriptionsSubscribeIdDisable(tenantId(), subscribeId, req);
     }
 
     @GetMapping("/benefit/api/v1/tenant/subscriptions/{subscribe_id}/items")
     public Object getSubscriptionsSubscribeIdItems(
             @PathVariable("subscribe_id") String subscribeId,
             @RequestParam(value = "item_id", required = false) String itemId) {
-        return client.getSubscriptionsSubscribeIdItems(appId(), subscribeId, itemId);
+        return client.getSubscriptionsSubscribeIdItems(tenantId(), subscribeId, itemId);
     }
 
     @PostMapping("/benefit/api/v1/tenant/compensations")
     public Object postCompensations(
             @Valid @RequestBody fun.commons.benefit4j.dto.PostCompensationsRequest req) {
-        return client.postCompensations(appId(), req);
+        return client.postCompensations(tenantId(), req);
     }
 
     @GetMapping("/benefit/api/v1/tenant/subscriptions")
@@ -158,7 +158,7 @@ public class BenefitTenantController {
             @RequestParam(value = "created_at_end", required = false) java.time.OffsetDateTime createdAtEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getSubscriptions(appId(), userid, setId, status, externalOrderId, keyword, dateBeginStart, dateBeginEnd, createdAtStart, createdAtEnd, page, size);
+        return client.getSubscriptions(tenantId(), userid, setId, status, externalOrderId, keyword, dateBeginStart, dateBeginEnd, createdAtStart, createdAtEnd, page, size);
     }
 
     @GetMapping("/benefit/api/v1/tenant/consumes")
@@ -175,18 +175,18 @@ public class BenefitTenantController {
             @RequestParam(value = "consume_time_end", required = false) java.time.OffsetDateTime consumeTimeEnd,
             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
             @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) {
-        return client.getConsumes(appId(), userid, subsItemId, itemId, status, externalOrderId, keyword, consumeNumMin, consumeNumMax, consumeTimeStart, consumeTimeEnd, page, size);
+        return client.getConsumes(tenantId(), userid, subsItemId, itemId, status, externalOrderId, keyword, consumeNumMin, consumeNumMax, consumeTimeStart, consumeTimeEnd, page, size);
     }
 
     @PostMapping("/benefit/api/v1/tenant/consumes/{consume_id}/refund")
     public Object postConsumesIdRefund(
             @PathVariable("consume_id") String consumeId,
             @Valid @RequestBody fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req) {
-        return client.postConsumesIdRefund(appId(), consumeId, req);
+        return client.postConsumesIdRefund(tenantId(), consumeId, req);
     }
 
-    private Long appId() {
-        Object claim = TokenContext.getClaim("app_id");
+    private Long tenantId() {
+        Object claim = TokenContext.getClaim("tenant_id");
         if (claim == null) return null;
         if (claim instanceof Long l) return l;
         if (claim instanceof Number n) return n.longValue();

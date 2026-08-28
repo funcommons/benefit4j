@@ -44,7 +44,7 @@ public class AssetsLoadIT extends BaseMapperTest {
 
     @Test
     public void testMixedLoad_zeroErrorsAndThroughput() throws Exception {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         List<Long> users = new ArrayList<>();
         for (int i = 0; i < USERS; i++) users.add(uniqueLongId());
 
@@ -54,7 +54,7 @@ public class AssetsLoadIT extends BaseMapperTest {
             for (int i = batch * 20; i < (batch + 1) * 20; i++) {
                 legs.add(leg("issue:POINTS", "user:" + users.get(i), "POINTS", "5000"));
             }
-            postingService.commitTx(cmd(appId, "IT-LOAD-SEED-" + uniqueAppid(), "ISSUE",
+            postingService.commitTx(cmd(tenantId, "IT-LOAD-SEED-" + uniqueTenantid(), "ISSUE",
                     legs.toArray(new PostingCommand.LegSpec[0])));
         }
 
@@ -74,10 +74,10 @@ public class AssetsLoadIT extends BaseMapperTest {
                     try {
                         Long uid = users.get(rnd.nextInt(USERS));
                         if (rnd.nextInt(10) == 0) {
-                            postingService.commitTx(cmd(appId, "IT-LOAD-I-" + uniqueAppid(), "ISSUE",
+                            postingService.commitTx(cmd(tenantId, "IT-LOAD-I-" + uniqueTenantid(), "ISSUE",
                                     leg("issue:POINTS", "user:" + uid, "POINTS", "50")));
                         } else {
-                            postingService.commitTx(cmd(appId, "IT-LOAD-C-" + uniqueAppid(), "CONSUME",
+                            postingService.commitTx(cmd(tenantId, "IT-LOAD-C-" + uniqueTenantid(), "CONSUME",
                                     leg("user:" + uid, "fee:POINTS", "POINTS",
                                             String.valueOf(1 + rnd.nextInt(10)))));
                         }
@@ -111,9 +111,9 @@ public class AssetsLoadIT extends BaseMapperTest {
 
     // ---------- locals ----------
 
-    private PostingCommand cmd(Long appId, String orderId, String txType, PostingCommand.LegSpec... legs) {
+    private PostingCommand cmd(Long tenantId, String orderId, String txType, PostingCommand.LegSpec... legs) {
         PostingCommand c = new PostingCommand();
-        c.setAppId(appId);
+        c.setTenantId(tenantId);
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

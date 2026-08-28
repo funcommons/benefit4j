@@ -23,7 +23,7 @@ import java.util.UUID;
  * - Authorization: Bearer S2S JWT (AccessTokenGenerator.generateToken, 可选)
  * - X-Access-Key / X-Timestamp / X-Nonce / X-Signature (HMAC-SHA256)
  * <p>
- * 业务方 remote 模式需配 benefit4j.runtime.remote-app-id + remote-app-secret
+ * 业务方 remote 模式需配 benefit4j.runtime.remote-tenant-id + remote-tenant-secret
  * (从独立部署 benefit4j 平台获取)。S2S JWT 需业务方配 framework4j-access-token (Redis)。
  */
 public class AuthenticatedHttpTransport implements HttpTransport {
@@ -73,10 +73,10 @@ public class AuthenticatedHttpTransport implements HttpTransport {
     private Map<String, String> enrich(String url, String method, Object body, Map<String, String> existing) {
         Map<String, String> h = new HashMap<>(existing);
 
-        String appId = properties.getRemoteAppId();
-        String appSecret = properties.getRemoteAppSecret();
-        if (appId == null || appSecret == null) {
-            log.warn("[AuthenticatedHttpTransport] remote-app-id/secret 未配, 跳过签名 (远端 @RequiresToken 会拒)");
+        String tenantId = properties.getRemoteTenantId();
+        String tenantSecret = properties.getRemoteTenantSecret();
+        if (tenantId == null || tenantSecret == null) {
+            log.warn("[AuthenticatedHttpTransport] remote-tenant-id/secret 未配, 跳过签名 (远端 @RequiresToken 会拒)");
             return h;
         }
 
@@ -84,7 +84,7 @@ public class AuthenticatedHttpTransport implements HttpTransport {
         AccessTokenGenerator gen = tokenGeneratorProvider.getIfAvailable();
         if (gen != null) {
             try {
-                String jwt = gen.generateToken("SERVICE", Map.of("app_id", appId));
+                String jwt = gen.generateToken("SERVICE", Map.of("tenant_id", tenantId));
                 h.put("Authorization", "Bearer " + jwt);
             } catch (Exception e) {
                 log.warn("[AuthenticatedHttpTransport] S2S JWT 生成失败 (业务方需配 framework4j-access-token + Redis): {}", e.getMessage());
@@ -97,9 +97,9 @@ public class AuthenticatedHttpTransport implements HttpTransport {
         String nonce = UUID.randomUUID().toString();
         String bodyMd5 = md5Hex(body);
         String sts = SignatureUtil.buildStringToSign(method, path, ts, nonce, bodyMd5);
-        String sig = SignatureUtil.sign(appSecret, sts);
+        String sig = SignatureUtil.sign(tenantSecret, sts);
 
-        h.put("X-Access-Key", appId);
+        h.put("X-Access-Key", tenantId);
         h.put("X-Timestamp", ts);
         h.put("X-Nonce", nonce);
         h.put("X-Signature", sig);

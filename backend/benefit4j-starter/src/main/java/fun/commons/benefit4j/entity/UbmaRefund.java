@@ -25,11 +25,11 @@ public class UbmaRefund {
     private Long id;
 
     /**
-     * 归属的应用主键ID (关联 ubma_application.id)
+     * 归属的租户主键ID (关联 ubma_tenant.id)
      */
     @OpenId
-    @TableField("app_id")
-    private Long appId;
+    @TableField("tenant_id")
+    private Long tenantId;
 
     /**
      * 关联的原消费流水号

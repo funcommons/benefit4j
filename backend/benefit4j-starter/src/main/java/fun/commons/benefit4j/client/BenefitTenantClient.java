@@ -2,55 +2,55 @@ package fun.commons.benefit4j.client;
 
 public interface BenefitTenantClient {
     // 创建租户级自定义权益项
-    Object postBenefitItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostBenefitItemsRequest req);
+    Object postBenefitItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostBenefitItemsRequest req);
 
     // 分页查询租户权益项库
-    Object getBenefitItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId);
+    Object getBenefitItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId);
 
     // 查询特定权益项详情
-    Object getBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId);
+    Object getBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId);
 
     // 修改指定权益项信息
-    Object putBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutBenefitItemsItemIdRequest req);
+    Object putBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutBenefitItemsItemIdRequest req);
 
     // 逻辑作废/删除指定权益项
-    Object deleteBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId);
+    Object deleteBenefitItemsItemId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("item_id") String itemId);
 
     // 查询系统授权给本租户的可用模板
-    Object getBenefitTemplates(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId);
+    Object getBenefitTemplates(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId);
 
     // 组合权益项创建/实例化售卖产品
-    Object postBenefitSets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostBenefitSetsRequest req);
+    Object postBenefitSets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostBenefitSetsRequest req);
 
     // 分页查询租户上架的权益产品
-    Object getBenefitSets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId);
+    Object getBenefitSets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId);
 
     // 查询权益产品装配明细与额度
-    Object getBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId);
+    Object getBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId);
 
     // 修改权益产品信息及额度配置
-    Object putBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutBenefitSetsSetIdRequest req);
+    Object putBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PutBenefitSetsSetIdRequest req);
 
     // 逻辑下架/删除指定权益产品
-    Object deleteBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId);
+    Object deleteBenefitSetsSetId(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("set_id") String setId);
 
     // (客服能力) 穿透查阅指定用户资产大账
-    Object getUsersUseridAssets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("userid") String userid);
+    Object getUsersUseridAssets(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("userid") String userid);
 
     // (客服能力) 穿透查询流水与订单关联
-    Object getUsersUseridConsumes(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("userid") String userid);
+    Object getUsersUseridConsumes(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("userid") String userid);
 
     // (客服能力) 手工补发/开通权益产品
-    Object postSubscriptions(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostSubscriptionsRequest req);
+    Object postSubscriptions(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostSubscriptionsRequest req);
 
     // (客服能力) 手工封禁/停用作恶用户订阅
-    Object postSubscriptionsSubscribeIdDisable(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.PathVariable("subscribe_id") String subscribeId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostSubscriptionsSubscribeIdDisableRequest req);
+    Object postSubscriptionsSubscribeIdDisable(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.PathVariable("subscribe_id") String subscribeId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostSubscriptionsSubscribeIdDisableRequest req);
 
     // (客服能力) 人工补偿针对单项的额度
-    Object postCompensations(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostCompensationsRequest req);
+    Object postCompensations(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId, @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostCompensationsRequest req);
 
     // 多条件分页查询本租户用户订阅
-    Object getSubscriptions(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId,
+    Object getSubscriptions(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId,
                             @org.springframework.web.bind.annotation.RequestParam(value = "userid", required = false) String userid,
                             @org.springframework.web.bind.annotation.RequestParam(value = "set_id", required = false) String setId,
                             @org.springframework.web.bind.annotation.RequestParam(value = "status", required = false) String status,
@@ -64,12 +64,12 @@ public interface BenefitTenantClient {
                             @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "20") Integer size);
 
     // 列出指定订阅下的多源额度桶 (V1.2.0)
-    Object getSubscriptionsSubscribeIdItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId,
+    Object getSubscriptionsSubscribeIdItems(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId,
                                             @org.springframework.web.bind.annotation.PathVariable("subscribe_id") String subscribeId,
                                             @org.springframework.web.bind.annotation.RequestParam(value = "item_id", required = false) String itemId);
 
     // 多条件分页查询本租户扣减流水
-    Object getConsumes(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId,
+    Object getConsumes(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId,
                        @org.springframework.web.bind.annotation.RequestParam(value = "userid", required = false) String userid,
                        @org.springframework.web.bind.annotation.RequestParam(value = "subs_item_id", required = false) String subsItemId,
                        @org.springframework.web.bind.annotation.RequestParam(value = "item_id", required = false) String itemId,
@@ -84,7 +84,7 @@ public interface BenefitTenantClient {
                        @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "20") Integer size);
 
     // 手动退减已 COMMIT 的扣减流水
-    Object postConsumesIdRefund(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long appId,
+    Object postConsumesIdRefund(@org.springframework.web.bind.annotation.RequestHeader(value="X-App-Id", required=false) Long tenantId,
                                 @org.springframework.web.bind.annotation.PathVariable("consume_id") String consumeId,
                                 @org.springframework.web.bind.annotation.RequestBody fun.commons.benefit4j.dto.PostConsumesIdRefundRequest req);
 

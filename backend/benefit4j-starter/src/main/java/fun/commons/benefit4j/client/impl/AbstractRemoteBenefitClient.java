@@ -33,12 +33,12 @@ public abstract class AbstractRemoteBenefitClient {
     }
 
     /** 无 query 参数调用 */
-    protected Object invoke(String path, String method, Long appId, Object body) {
-        return invoke(path, method, appId, body, null);
+    protected Object invoke(String path, String method, Long tenantId, Object body) {
+        return invoke(path, method, tenantId, body, null);
     }
 
     /** 带 query 参数调用 (分页/过滤) */
-    protected Object invoke(String path, String method, Long appId, Object body, Map<String, String> query) {
+    protected Object invoke(String path, String method, Long tenantId, Object body, Map<String, String> query) {
         String url = properties.getRemoteUrl() + path;
         if (query != null && !query.isEmpty()) {
             String qs = query.entrySet().stream()
@@ -48,7 +48,7 @@ public abstract class AbstractRemoteBenefitClient {
             if (!qs.isEmpty()) url += "?" + qs;
         }
         Map<String, String> headers = new HashMap<>();
-        if (appId != null) headers.put("X-App-Id", String.valueOf(appId));
+        if (tenantId != null) headers.put("X-App-Id", String.valueOf(tenantId));
         String m = method.toUpperCase();
         if ("POST".equals(m) || "PUT".equals(m) || "DELETE".equals(m)) {
             headers.put("Idempotency-Key", UUID.randomUUID().toString());

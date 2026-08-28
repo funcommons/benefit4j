@@ -52,11 +52,11 @@ public class CreditIT extends BaseMapperTest {
     @Autowired
     private fun.commons.benefit4j.controller.BenefitAssetsRuntimeController runtime;
 
-    private Long appId;
+    private Long tenantId;
 
     private Long app() {
-        if (appId == null) appId = createApp().getId();
-        return appId;
+        if (tenantId == null) tenantId = createTenant().getId();
+        return tenantId;
     }
 
     private String ensureAsset(String code, boolean canCredit, boolean canTransfer) {
@@ -77,8 +77,8 @@ public class CreditIT extends BaseMapperTest {
 
     @Test
     public void testCreditLimit_requiresAssetCapability() {
-        String okAsset = ensureAsset("CRD_OK_" + uniqueAppid().substring(0, 6).toUpperCase(), true, true);
-        String noAsset = ensureAsset("CRD_NO_" + uniqueAppid().substring(0, 6).toUpperCase(), false, true);
+        String okAsset = ensureAsset("CRD_OK_" + uniqueTenantid().substring(0, 6).toUpperCase(), true, true);
+        String noAsset = ensureAsset("CRD_NO_" + uniqueTenantid().substring(0, 6).toUpperCase(), false, true);
         Long uid1 = uniqueLongId();
         Long uid2 = uniqueLongId();
         var acc1 = accountService.getOrCreateAccount(app(), "USER", uid1, okAsset);
@@ -101,10 +101,10 @@ public class CreditIT extends BaseMapperTest {
         // POINTS 种子 can_transfer=false → TRANSFER 腿被引擎兜底拒绝
         Long a = uniqueLongId();
         Long b = uniqueLongId();
-        postingService.commitTx(cmd("IT-CRD-F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-CRD-F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:POINTS", "user:" + a, "POINTS", "10"),
                 leg("issue:POINTS", "user:" + b, "POINTS", "10")));
-        assertThatThrownBy(() -> postingService.commitTx(cmd("IT-CRD-T-" + uniqueAppid(), "TRANSFER",
+        assertThatThrownBy(() -> postingService.commitTx(cmd("IT-CRD-T-" + uniqueTenantid(), "TRANSFER",
                 leg("user:" + a, "user:" + b, "POINTS", "1"))))
                 .isInstanceOf(AssetsException.class)
                 .extracting(e -> ((AssetsException) e).getCode())
@@ -113,22 +113,22 @@ public class CreditIT extends BaseMapperTest {
 
     @Test
     public void testRepay_restoresNegativeBalance() {
-        String asset = ensureAsset("CRD_RP_" + uniqueAppid().substring(0, 6).toUpperCase(), true, true);
+        String asset = ensureAsset("CRD_RP_" + uniqueTenantid().substring(0, 6).toUpperCase(), true, true);
         Long uid = uniqueLongId();
         var acc = accountService.getOrCreateAccount(app(), "USER", uid, asset);
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("100"));
-        postingService.commitTx(cmd("IT-CRD-RP-F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-CRD-RP-F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:" + asset, "user:" + uid, asset, "20")));
         // 预扣 50 → 结算 60: 余额 20-60 = -40(授信内)
         var pre = new fun.commons.benefit4j.assets.dto.PreConsumeRequest();
-        pre.setAppId(app());
-        pre.setRequestId("IT-CRD-RP-" + uniqueAppid());
+        pre.setTenantId(app());
+        pre.setRequestId("IT-CRD-RP-" + uniqueTenantid());
         pre.setAccountRef("user:" + uid);
         pre.setAssetCode(asset);
         pre.setEstimated(new BigDecimal("50"));
         preConsumeService.preConsume(pre);
         var settle = new fun.commons.benefit4j.assets.dto.SettleRequest();
-        settle.setAppId(app());
+        settle.setTenantId(app());
         settle.setRequestId(pre.getRequestId());
         settle.setActual(new BigDecimal("60"));
         preConsumeService.settle(settle);
@@ -137,10 +137,10 @@ public class CreditIT extends BaseMapperTest {
 
         // repay 50: user → credit:{asset}(BOUNDARY),余额回正到 10
         fun.commons.framework4j.accesstoken.context.TokenContext.set("APP",
-                java.util.Map.of("app_id", app()));
+                java.util.Map.of("tenant_id", app()));
         try {
             RepayRequest repay = new RepayRequest();
-            repay.setRequestId("IT-CRD-RPY-" + uniqueAppid());
+            repay.setRequestId("IT-CRD-RPY-" + uniqueTenantid());
             repay.setAccountRef("user:" + uid);
             repay.setAssetCode(asset);
             repay.setAmount(new BigDecimal("50"));
@@ -158,21 +158,21 @@ public class CreditIT extends BaseMapperTest {
 
     @Test
     public void testNegativeBalance_cannotFreeze() {
-        String asset = ensureAsset("CRD_FZ_" + uniqueAppid().substring(0, 6).toUpperCase(), true, true);
+        String asset = ensureAsset("CRD_FZ_" + uniqueTenantid().substring(0, 6).toUpperCase(), true, true);
         Long uid = uniqueLongId();
         var acc = accountService.getOrCreateAccount(app(), "USER", uid, asset);
         accountService.updateCreditLimit(app(), acc.getId(), new BigDecimal("100"));
-        postingService.commitTx(cmd("IT-CRD-FZ-F-" + uniqueAppid(), "ISSUE",
+        postingService.commitTx(cmd("IT-CRD-FZ-F-" + uniqueTenantid(), "ISSUE",
                 leg("issue:" + asset, "user:" + uid, asset, "30")));
-        postingService.commitTx(cmd("IT-CRD-FZ-C-" + uniqueAppid(), "CONSUME",
+        postingService.commitTx(cmd("IT-CRD-FZ-C-" + uniqueTenantid(), "CONSUME",
                 leg("user:" + uid, "fee:" + asset, asset, "50")));   // 30-50 = -20
         assertThat(accountService.getAccount(acc.getId()).getBalance())
                 .isEqualByComparingTo("-20");
 
         // 负余额户全额冻结被拒(提现风控联动: 冻结只认正余额)
         var fr = new fun.commons.benefit4j.assets.dto.FreezeRequest();
-        fr.setAppId(app());
-        fr.setFreezeNo("IT-CRD-FZ-" + uniqueAppid());
+        fr.setTenantId(app());
+        fr.setFreezeNo("IT-CRD-FZ-" + uniqueTenantid());
         fr.setAccountRef("user:" + uid);
         fr.setAssetCode(asset);
         fr.setAmount(new BigDecimal("10"));
@@ -187,7 +187,7 @@ public class CreditIT extends BaseMapperTest {
 
     private PostingCommand cmd(String orderId, String txType, PostingCommand.LegSpec... legs) {
         PostingCommand c = new PostingCommand();
-        c.setAppId(app());
+        c.setTenantId(app());
         c.setExtOrderId(orderId);
         c.setTxType(txType);
         c.setLegs(List.of(legs));

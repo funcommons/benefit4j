@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultBenefitPlatformService implements BenefitPlatformService {
 
-    private final UbmaApplicationMapper applicationMapper;
+    private final UbmaTenantMapper applicationMapper;
     private final UbmaBenefitItemMapper benefitItemMapper;
     private final UbmaBenefitSetMapper benefitSetMapper;
     private final UbmpBenefitTmplSetMapper benefitTmplSetMapper;
@@ -41,10 +41,10 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     @Override
     @Transactional
     @Auditable(action = "APP_CREATE", targetType = "application", targetIdSpel = "#req.name")
-    public Object postApplications(PostApplicationsRequest req) {
+    public Object postTenants(PostTenantsRequest req) {
         OffsetDateTime now = OffsetDateTime.now();
-        UbmaApplication app = new UbmaApplication();
-        app.setAppSecret(UUID.randomUUID().toString().replace("-", ""));
+        UbmaTenant app = new UbmaTenant();
+        app.setTenantSecret(UUID.randomUUID().toString().replace("-", ""));
         app.setName(req.getName());
         app.setDescription(req.getDescription() != null ? req.getDescription() : "");
         app.setStatus("ACTIVE");
@@ -56,7 +56,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", IdObfuscator.toOpenId(app.getId()));
         result.put("name", app.getName());
-        result.put("app_secret", app.getAppSecret());
+        result.put("tenant_secret", app.getTenantSecret());
         result.put("name", app.getName());
         result.put("description", app.getDescription());
         result.put("status", app.getStatus());
@@ -65,14 +65,14 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
 
     @Override
     @Transactional
-    public Object getApplications() {
-        List<UbmaApplication> apps = applicationMapper.selectList(null);
+    public Object getTenants() {
+        List<UbmaTenant> apps = applicationMapper.selectList(null);
         List<Map<String, Object>> result = new ArrayList<>();
         Map<Long, Integer> subCountByAppid = countSubscriptionsByAppid();
-        for (UbmaApplication app : apps) {
+        for (UbmaTenant app : apps) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", IdObfuscator.toOpenId(app.getId()));
-            row.put("app_secret", maskSecret(app.getAppSecret()));
+            row.put("tenant_secret", maskSecret(app.getTenantSecret()));
             row.put("name", app.getName());
             row.put("description", app.getDescription());
             row.put("status", app.getStatus());
@@ -86,7 +86,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     }
 
     /**
-     * 列表查询返回的 app_secret 已脱敏处理,只有创建 / 重置接口返回完整密钥
+     * 列表查询返回的 tenant_secret 已脱敏处理,只有创建 / 重置接口返回完整密钥
      */
     private static String maskSecret(String raw) {
         if (raw == null || raw.length() <= 8) return "••••••";
@@ -97,28 +97,28 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         List<UbmaSubscribe> subs = subscribeMapper.selectList(null);
         Map<Long, Integer> map = new java.util.HashMap<>();
         for (UbmaSubscribe s : subs) {
-            if (s.getAppId() == null) continue;
-            map.merge(s.getAppId(), 1, Integer::sum);
+            if (s.getTenantId() == null) continue;
+            map.merge(s.getTenantId(), 1, Integer::sum);
         }
         return map;
     }
 
     @Override
     @Transactional
-    @Auditable(action = "APP_UPDATE", targetType = "application", targetIdSpel = "#appId")
-    public Object putApplicationsAppId(Long appId, PutApplicationsAppIdRequest req) {
-        UbmaApplication app = applicationMapper.selectById(appId);
+    @Auditable(action = "APP_UPDATE", targetType = "application", targetIdSpel = "#tenantId")
+    public Object putTenantsTenantId(Long tenantId, PutTenantsTenantIdRequest req) {
+        UbmaTenant app = applicationMapper.selectById(tenantId);
         if (app == null) {
-            return ApiResponse.fail(404, "应用不存在");
+            return ApiResponse.fail(404, "租户不存在");
         }
 
-        LambdaUpdateWrapper<UbmaApplication> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(UbmaApplication::getId, app.getId());
-        if (req.getName() != null) wrapper.set(UbmaApplication::getName, req.getName());
-        if (req.getDescription() != null) wrapper.set(UbmaApplication::getDescription, req.getDescription());
-        if (req.getStatus() != null) wrapper.set(UbmaApplication::getStatus, req.getStatus());
-        if (req.getExt() != null) wrapper.set(UbmaApplication::getExt, req.getExt());
-        wrapper.set(UbmaApplication::getUpdatedAt, OffsetDateTime.now());
+        LambdaUpdateWrapper<UbmaTenant> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(UbmaTenant::getId, app.getId());
+        if (req.getName() != null) wrapper.set(UbmaTenant::getName, req.getName());
+        if (req.getDescription() != null) wrapper.set(UbmaTenant::getDescription, req.getDescription());
+        if (req.getStatus() != null) wrapper.set(UbmaTenant::getStatus, req.getStatus());
+        if (req.getExt() != null) wrapper.set(UbmaTenant::getExt, req.getExt());
+        wrapper.set(UbmaTenant::getUpdatedAt, OffsetDateTime.now());
         applicationMapper.update(null, wrapper);
 
         return ApiResponse.success("ok");
@@ -126,38 +126,38 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
 
     @Override
     @Transactional
-    @Auditable(action = "APP_RESET_SECRET", targetType = "application", targetIdSpel = "#appId")
-    public Object postApplicationsAppIdSecret(Long appId) {
-        UbmaApplication app = applicationMapper.selectById(appId);
+    @Auditable(action = "APP_RESET_SECRET", targetType = "application", targetIdSpel = "#tenantId")
+    public Object postTenantsTenantIdSecret(Long tenantId) {
+        UbmaTenant app = applicationMapper.selectById(tenantId);
         if (app == null) {
-            return ApiResponse.fail(404, "应用不存在");
+            return ApiResponse.fail(404, "租户不存在");
         }
 
         String newSecret = UUID.randomUUID().toString().replace("-", "");
-        // 走 updateById 让 LazyEncryptedFieldTypeHandler (framework4j) 自动加密 app_secret;
+        // 走 updateById 让 LazyEncryptedFieldTypeHandler (framework4j) 自动加密 tenant_secret;
         // ext 字段标了 jdbcType=JdbcType.OTHER 修复 JSONB update cast, 全量 updateById 不再报
         // "column ext is of type jsonb but expression is of type varchar"
-        app.setAppSecret(newSecret);
+        app.setTenantSecret(newSecret);
         app.setUpdatedAt(OffsetDateTime.now());
         applicationMapper.updateById(app);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", IdObfuscator.toOpenId(app.getId()));
         result.put("name", app.getName());
-        result.put("app_secret", newSecret);
+        result.put("tenant_secret", newSecret);
         return ApiResponse.success(result);
     }
 
     @Override
-    public Object getApplicationsAppIdSecret(Long appId) {
-        UbmaApplication app = applicationMapper.selectById(appId);
+    public Object getTenantsTenantIdSecret(Long tenantId) {
+        UbmaTenant app = applicationMapper.selectById(tenantId);
         if (app == null) {
-            return ApiResponse.fail(404, "应用不存在");
+            return ApiResponse.fail(404, "租户不存在");
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", IdObfuscator.toOpenId(app.getId()));
         result.put("name", app.getName());
-        result.put("app_secret", app.getAppSecret());
+        result.put("tenant_secret", app.getTenantSecret());
         return ApiResponse.success(result);
     }
 
@@ -298,7 +298,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     }
 
     @Override
-    public Object getPlatformItems(Long appId,
+    public Object getPlatformItems(Long tenantId,
                                     String status,
                                     String keyword,
                                     OffsetDateTime createdAtStart,
@@ -306,7 +306,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
                                     Integer page,
                                     Integer size) {
         LambdaQueryWrapper<UbmaBenefitItem> query = new LambdaQueryWrapper<>();
-        if (appId != null) query.eq(UbmaBenefitItem::getAppId, appId);
+        if (tenantId != null) query.eq(UbmaBenefitItem::getTenantId, tenantId);
         if (status != null && !status.isBlank()) query.eq(UbmaBenefitItem::getStatus, status.trim());
         if (keyword != null && !keyword.isBlank()) {
             String kw = keyword.trim();
@@ -326,11 +326,11 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         List<UbmaBenefitItem> items = benefitItemMapper.selectList(query);
 
         // 批量拉租户名称
-        Set<Long> appIds = items.stream().map(UbmaBenefitItem::getAppId)
+        Set<Long> tenantIds = items.stream().map(UbmaBenefitItem::getTenantId)
                 .filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, String> appNameById = new HashMap<>();
-        if (!appIds.isEmpty()) {
-            for (UbmaApplication a : applicationMapper.selectBatchIds(appIds)) {
+        if (!tenantIds.isEmpty()) {
+            for (UbmaTenant a : applicationMapper.selectBatchIds(tenantIds)) {
                 appNameById.put(a.getId(), a.getName());
             }
         }
@@ -355,8 +355,8 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
             int used = (int) arr[1];
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", IdObfuscator.toOpenId(bi.getId()));
-            row.put("app_id", IdObfuscator.toOpenId(bi.getAppId()));
-            row.put("tenant_name", appNameById.getOrDefault(bi.getAppId(), ""));
+            row.put("tenant_id", IdObfuscator.toOpenId(bi.getTenantId()));
+            row.put("tenant_name", appNameById.getOrDefault(bi.getTenantId(), ""));
             row.put("name", bi.getName());
             row.put("icon", bi.getIcon());
             row.put("description", bi.getDescription());
@@ -374,7 +374,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     }
 
     @Override
-    public Object getPlatformBenefitSets(Long appId,
+    public Object getPlatformBenefitSets(Long tenantId,
                                           String status,
                                           String keyword,
                                           Integer priorityMin,
@@ -384,7 +384,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
                                           Integer page,
                                           Integer size) {
         LambdaQueryWrapper<UbmaBenefitSet> query = new LambdaQueryWrapper<>();
-        if (appId != null) query.eq(UbmaBenefitSet::getAppId, appId);
+        if (tenantId != null) query.eq(UbmaBenefitSet::getTenantId, tenantId);
         if (status != null && !status.isBlank()) query.eq(UbmaBenefitSet::getStatus, status.trim());
         if (keyword != null && !keyword.isBlank()) query.like(UbmaBenefitSet::getName, keyword.trim());
         if (priorityMin != null) query.ge(UbmaBenefitSet::getPriority, priorityMin);
@@ -402,11 +402,11 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         List<UbmaBenefitSet> sets = benefitSetMapper.selectList(query);
 
         // 批量拉租户名称
-        Set<Long> appIds = sets.stream().map(UbmaBenefitSet::getAppId)
+        Set<Long> tenantIds = sets.stream().map(UbmaBenefitSet::getTenantId)
                 .filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, String> appNameById = new HashMap<>();
-        if (!appIds.isEmpty()) {
-            for (UbmaApplication a : applicationMapper.selectBatchIds(appIds)) {
+        if (!tenantIds.isEmpty()) {
+            for (UbmaTenant a : applicationMapper.selectBatchIds(tenantIds)) {
                 appNameById.put(a.getId(), a.getName());
             }
         }
@@ -427,8 +427,8 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         for (UbmaBenefitSet bs : sets) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", IdObfuscator.toOpenId(bs.getId()));
-            row.put("app_id", IdObfuscator.toOpenId(bs.getAppId()));
-            row.put("tenant_name", appNameById.getOrDefault(bs.getAppId(), ""));
+            row.put("tenant_id", IdObfuscator.toOpenId(bs.getTenantId()));
+            row.put("tenant_name", appNameById.getOrDefault(bs.getTenantId(), ""));
             row.put("name", bs.getName());
             row.put("duration", bs.getDuration());
             row.put("duration_unit", bs.getDurationUnit());
@@ -559,7 +559,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     // ========== 跨租户多条件分页查询订阅 ==========
 
     @Override
-    public Object getPlatformSubscriptions(Long appId,
+    public Object getPlatformSubscriptions(Long tenantId,
                                            String userid,
                                            String setId,
                                            String status,
@@ -571,11 +571,11 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
                                            OffsetDateTime createdAtEnd,
                                            Integer page,
                                            Integer size) {
-        if (appId != null && applicationMapper.selectById(appId) == null) {
+        if (tenantId != null && applicationMapper.selectById(tenantId) == null) {
             return ApiResponse.fail(404, "租户不存在");
         }
         LambdaQueryWrapper<UbmaSubscribe> query = new LambdaQueryWrapper<>();
-        if (appId != null) query.eq(UbmaSubscribe::getAppId, appId);
+        if (tenantId != null) query.eq(UbmaSubscribe::getTenantId, tenantId);
         if (userid != null && !userid.isBlank()) query.eq(UbmaSubscribe::getUserid, userid.trim());
         if (setId != null && !setId.isBlank()) {
             Long sid = safeParseId(setId);
@@ -613,10 +613,10 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
             }
         }
         // 拉 app_name
-        Set<Long> appIds = rows.stream().map(UbmaSubscribe::getAppId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> tenantIds = rows.stream().map(UbmaSubscribe::getTenantId).filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, String> appNameById = new HashMap<>();
-        if (!appIds.isEmpty()) {
-            for (UbmaApplication a : applicationMapper.selectBatchIds(appIds)) {
+        if (!tenantIds.isEmpty()) {
+            for (UbmaTenant a : applicationMapper.selectBatchIds(tenantIds)) {
                 appNameById.put(a.getId(), a.getName());
             }
         }
@@ -625,8 +625,8 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         for (UbmaSubscribe sub : rows) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("subscribe_id", IdObfuscator.toOpenId(sub.getId()));
-            row.put("app_id", IdObfuscator.toOpenId(sub.getAppId()));
-            row.put("app_name", appNameById.getOrDefault(sub.getAppId(), ""));
+            row.put("tenant_id", IdObfuscator.toOpenId(sub.getTenantId()));
+            row.put("app_name", appNameById.getOrDefault(sub.getTenantId(), ""));
             row.put("userid", sub.getUserid());
             row.put("set_id", IdObfuscator.toOpenId(sub.getSetId()));
             row.put("set_name", setNameById.getOrDefault(sub.getSetId(), ""));
@@ -646,13 +646,13 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     }
 
     @Override
-    public Object getPlatformSubscriptionsSubscribeIdItems(Long appId, String subscribeId, String itemId) {
+    public Object getPlatformSubscriptionsSubscribeIdItems(Long tenantId, String subscribeId, String itemId) {
         Long sid = safeParseId(subscribeId);
         if (sid == null) return ApiResponse.fail(400, "无效的订阅ID");
 
         UbmaSubscribe sub = subscribeMapper.selectById(sid);
         if (sub == null) return ApiResponse.fail(404, "订阅不存在");
-        if (appId != null && !sub.getAppId().equals(appId)) {
+        if (tenantId != null && !sub.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "订阅不属于该租户");
         }
 
@@ -692,7 +692,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     // ========== 跨租户多条件分页查询扣减流水 ==========
 
     @Override
-    public Object getPlatformConsumes(Long appId,
+    public Object getPlatformConsumes(Long tenantId,
                                       String userid,
                                       String subsItemId,
                                       String itemId,
@@ -705,14 +705,14 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
                                       OffsetDateTime consumeTimeEnd,
                                       Integer page,
                                       Integer size) {
-        if (appId != null && applicationMapper.selectById(appId) == null) {
+        if (tenantId != null && applicationMapper.selectById(tenantId) == null) {
             return ApiResponse.fail(404, "租户不存在");
         }
         Set<Long> subscribeItemIdScope = null;
         if (userid != null && !userid.isBlank()) {
             LambdaQueryWrapper<UbmaSubscribe> subQ = new LambdaQueryWrapper<>();
             subQ.eq(UbmaSubscribe::getUserid, userid.trim());
-            if (appId != null) subQ.eq(UbmaSubscribe::getAppId, appId);
+            if (tenantId != null) subQ.eq(UbmaSubscribe::getTenantId, tenantId);
             List<UbmaSubscribe> subs = subscribeMapper.selectList(subQ);
             if (subs.isEmpty()) return ApiResponse.success(buildPage(java.util.Collections.emptyList(), 0, pageOr1(page), sizeOr20(size)));
             Set<Long> subIds = subs.stream().map(UbmaSubscribe::getId).collect(Collectors.toSet());
@@ -726,7 +726,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         }
 
         LambdaQueryWrapper<UbmaConsume> query = new LambdaQueryWrapper<>();
-        if (appId != null) query.eq(UbmaConsume::getAppId, appId);
+        if (tenantId != null) query.eq(UbmaConsume::getTenantId, tenantId);
         if (subscribeItemIdScope != null) {
             if (subsItemId != null && !subsItemId.isBlank()) {
                 Long sid = safeParseId(subsItemId);
@@ -794,7 +794,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         for (UbmaConsume c : rows) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("consume_id", IdObfuscator.toOpenId(c.getId()));
-            row.put("app_id", IdObfuscator.toOpenId(c.getAppId()));
+            row.put("tenant_id", IdObfuscator.toOpenId(c.getTenantId()));
             row.put("userid", useridBySubsItemId.getOrDefault(c.getSubsItemId(), ""));
             row.put("subs_item_id", IdObfuscator.toOpenId(c.getSubsItemId()));
             row.put("item_id", IdObfuscator.toOpenId(c.getItemId()));
@@ -816,19 +816,19 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
 
     @Override
     @Transactional
-    public Object postPlatformConsumesIdRefund(Long appId, String consumeId, PostConsumesIdRefundRequest req) {
-        if (appId != null && applicationMapper.selectById(appId) == null) {
+    public Object postPlatformConsumesIdRefund(Long tenantId, String consumeId, PostConsumesIdRefundRequest req) {
+        if (tenantId != null && applicationMapper.selectById(tenantId) == null) {
             return ApiResponse.fail(404, "租户不存在");
         }
-        return doPlatformRefundConsume(appId, consumeId, req);
+        return doPlatformRefundConsume(tenantId, consumeId, req);
     }
 
-    private Object doPlatformRefundConsume(Long appId, String consumeId, PostConsumesIdRefundRequest req) {
+    private Object doPlatformRefundConsume(Long tenantId, String consumeId, PostConsumesIdRefundRequest req) {
         Long id = safeParseId(consumeId);
         if (id == null) return ApiResponse.fail(400, "无效的消费流水ID");
         UbmaConsume consume = consumeMapper.selectById(id);
         if (consume == null) return ApiResponse.fail(404, "扣减流水不存在");
-        if (appId != null && !appId.equals(consume.getAppId())) {
+        if (tenantId != null && !tenantId.equals(consume.getTenantId())) {
             return ApiResponse.fail(404, "扣减流水不存在");
         }
         if (!"COMMITTED".equals(consume.getStatus())) {

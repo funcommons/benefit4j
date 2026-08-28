@@ -21,6 +21,7 @@ final class AssetsMigrations {
             "V1.3.4__init_assets_pre_consume.sql",
             "V1.3.5__init_assets_freeze.sql",
             "V1.3.6__init_reconcile.sql",
+            "V1.4.0__rename_app_to_tenant.sql",
     };
 
     private AssetsMigrations() {
@@ -35,11 +36,26 @@ final class AssetsMigrations {
 
     static void applyAll() throws Exception {
         try (Connection conn = open()) {
+            if (atV140(conn)) return;   // V1.4.0 已生效(列已 tenant_id)→ 结构就绪,跳过重放
             for (String file : FILES) {
                 try (var stmt = conn.createStatement()) {
                     stmt.execute(loadDdl(file));
                 }
             }
+        }
+    }
+
+    /**
+     * V1.4.0 改名(app_id→tenant_id)后,历史迁移里的 CREATE INDEX IF NOT EXISTS
+     * (引用 app_id)在跳过分支仍会因列不存在而报错 —— 已达终态的库直接跳过整个序列。
+     * 空库/纯旧库仍走全序列(V1.3.x 建表 + V1.4.0 改名),三种库状态幂等闭合。
+     */
+    private static boolean atV140(Connection conn) throws Exception {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(
+                 "SELECT 1 FROM information_schema.columns "
+                 + "WHERE table_name='ubmx_account' AND column_name='tenant_id'")) {
+            return rs.next();
         }
     }
 

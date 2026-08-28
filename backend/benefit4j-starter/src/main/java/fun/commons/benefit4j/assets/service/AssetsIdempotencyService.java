@@ -24,9 +24,9 @@ public class AssetsIdempotencyService {
     public record ReleaseView(String extOrderId, String status, String reason) {
     }
 
-    public ReleaseView release(Long appId, String extOrderId, String reason) {
+    public ReleaseView release(Long tenantId, String extOrderId, String reason) {
         UbmxTxOrder old = txOrderMapper.selectOne(new LambdaQueryWrapper<UbmxTxOrder>()
-                .eq(UbmxTxOrder::getAppId, appId)
+                .eq(UbmxTxOrder::getTenantId, tenantId)
                 .eq(UbmxTxOrder::getExtOrderId, extOrderId));
         if (old == null) {
             throw new AssetsException(AssetsException.PRE_CONSUME_NOT_FOUND, "幂等键不存在: " + extOrderId);
@@ -34,9 +34,9 @@ public class AssetsIdempotencyService {
         if ("FAILED".equals(old.getStatus())) {
             return new ReleaseView(extOrderId, "FAILED", reason);   // 幂等
         }
-        txOrderMapper.releaseKey(appId, extOrderId, reason);
+        txOrderMapper.releaseKey(tenantId, extOrderId, reason);
         log.warn("[assets][幂等释放] OPS 纠错: app={} extOrderId={} reason={} txId={}",
-                appId, extOrderId, reason, old.getTxId());
+                tenantId, extOrderId, reason, old.getTxId());
         return new ReleaseView(extOrderId, "FAILED", reason);
     }
 }

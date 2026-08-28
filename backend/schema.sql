@@ -19,10 +19,10 @@
 --   - 视图 / 触发器 / 存储过程 (项目禁)
 -- =============================================================================
 
--- ubma_application
-CREATE TABLE ubma_application (
+-- ubma_tenant
+CREATE TABLE ubma_tenant (
     id bigint NOT NULL,
-    app_secret varchar(132) NOT NULL,
+    tenant_secret varchar(132) NOT NULL,
     name varchar(68) NOT NULL,
     status varchar(36) NOT NULL DEFAULT 'ACTIVE',
     ext jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -34,7 +34,7 @@ CREATE TABLE ubma_application (
     description varchar(516) DEFAULT '',
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_application_ext ON public.ubma_application USING gin (ext);
+CREATE INDEX idx_ubma_tenant_ext ON public.ubma_tenant USING gin (ext);
 
 
 -- ubma_benefit_item
@@ -51,12 +51,12 @@ CREATE TABLE ubma_benefit_item (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_benefit_item_app_id ON public.ubma_benefit_item USING btree (app_id);
+CREATE INDEX idx_ubma_benefit_item_tenant_id ON public.ubma_benefit_item USING btree (tenant_id);
 CREATE INDEX idx_ubma_benefit_item_ext ON public.ubma_benefit_item USING gin (ext);
-CREATE UNIQUE INDEX uk_ubma_benefit_item_app_id_name ON public.ubma_benefit_item USING btree (app_id, name) WHERE (is_deleted = 0);
+CREATE UNIQUE INDEX uk_ubma_benefit_item_tenant_id_name ON public.ubma_benefit_item USING btree (tenant_id, name) WHERE (is_deleted = 0);
 
 
 -- ubma_benefit_ref
@@ -73,10 +73,10 @@ CREATE TABLE ubma_benefit_ref (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_benefit_ref_app_id ON public.ubma_benefit_ref USING btree (app_id);
+CREATE INDEX idx_ubma_benefit_ref_tenant_id ON public.ubma_benefit_ref USING btree (tenant_id);
 CREATE INDEX idx_ubma_benefit_ref_ext ON public.ubma_benefit_ref USING gin (ext);
 
 
@@ -99,10 +99,10 @@ CREATE TABLE ubma_benefit_set (
     is_deleted smallint NOT NULL DEFAULT 0,
     timing_mode varchar(20) NOT NULL DEFAULT 'RENEWAL',
     quota_unit varchar(20) NOT NULL DEFAULT '次',
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_benefit_set_app_id ON public.ubma_benefit_set USING btree (app_id);
+CREATE INDEX idx_ubma_benefit_set_tenant_id ON public.ubma_benefit_set USING btree (tenant_id);
 CREATE INDEX idx_ubma_benefit_set_ext ON public.ubma_benefit_set USING gin (ext);
 
 
@@ -122,10 +122,10 @@ CREATE TABLE ubma_compensation (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_compensation_app_id ON public.ubma_compensation USING btree (app_id);
+CREATE INDEX idx_ubma_compensation_tenant_id ON public.ubma_compensation USING btree (tenant_id);
 CREATE INDEX idx_ubma_compensation_ext ON public.ubma_compensation USING gin (ext);
 CREATE INDEX idx_ubma_compensation_subscribe_id ON public.ubma_compensation USING btree (subscribe_id);
 
@@ -146,10 +146,10 @@ CREATE TABLE ubma_consume (
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
     expire_time timestamptz,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_consume_app_id ON public.ubma_consume USING btree (app_id);
+CREATE INDEX idx_ubma_consume_tenant_id ON public.ubma_consume USING btree (tenant_id);
 CREATE INDEX idx_ubma_consume_ext ON public.ubma_consume USING gin (ext);
 
 
@@ -170,13 +170,13 @@ CREATE TABLE ubma_migration (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_migration_app_id ON public.ubma_migration USING btree (app_id);
+CREATE INDEX idx_ubma_migration_tenant_id ON public.ubma_migration USING btree (tenant_id);
 CREATE INDEX idx_ubma_migration_ext ON public.ubma_migration USING gin (ext);
 CREATE INDEX idx_ubma_migration_userid ON public.ubma_migration USING btree (userid);
-CREATE UNIQUE INDEX uk_ubma_migration_app_id_external_migrate_id ON public.ubma_migration USING btree (app_id, external_migrate_id) WHERE (is_deleted = 0);
+CREATE UNIQUE INDEX uk_ubma_migration_tenant_id_external_migrate_id ON public.ubma_migration USING btree (tenant_id, external_migrate_id) WHERE (is_deleted = 0);
 
 
 -- ubma_refund
@@ -192,10 +192,10 @@ CREATE TABLE ubma_refund (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_refund_app_id ON public.ubma_refund USING btree (app_id);
+CREATE INDEX idx_ubma_refund_tenant_id ON public.ubma_refund USING btree (tenant_id);
 CREATE INDEX idx_ubma_refund_ext ON public.ubma_refund USING gin (ext);
 
 
@@ -220,13 +220,13 @@ CREATE TABLE ubma_subscribe (
     is_deleted smallint NOT NULL DEFAULT 0,
     external_order_id varchar(68) NOT NULL DEFAULT '',
     frozen_consumed integer NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_subscribe_app_id ON public.ubma_subscribe USING btree (app_id);
+CREATE INDEX idx_ubma_subscribe_tenant_id ON public.ubma_subscribe USING btree (tenant_id);
 CREATE INDEX idx_ubma_subscribe_ext ON public.ubma_subscribe USING gin (ext);
 CREATE INDEX idx_ubma_subscribe_userid ON public.ubma_subscribe USING btree (userid);
-CREATE UNIQUE INDEX uk_ubma_subscribe_app_id_external_order_id ON public.ubma_subscribe USING btree (app_id, external_order_id) WHERE (is_deleted = 0);
+CREATE UNIQUE INDEX uk_ubma_subscribe_tenant_id_external_order_id ON public.ubma_subscribe USING btree (tenant_id, external_order_id) WHERE (is_deleted = 0);
 
 
 -- ubma_subscribe_item
@@ -246,16 +246,16 @@ CREATE TABLE ubma_subscribe_item (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     source_type varchar(36) NOT NULL DEFAULT 'SUBSCRIPTION',
     expires_at timestamptz,
     bucket_priority integer NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_subscribe_item_app_id ON public.ubma_subscribe_item USING btree (app_id);
+CREATE INDEX idx_ubma_subscribe_item_tenant_id ON public.ubma_subscribe_item USING btree (tenant_id);
 CREATE INDEX idx_ubma_subscribe_item_ext ON public.ubma_subscribe_item USING gin (ext);
 CREATE INDEX idx_ubma_subscribe_item_subscribe_id_item_id ON public.ubma_subscribe_item USING btree (subscribe_id, item_id);
-CREATE INDEX idx_user_item_active_priority ON public.ubma_subscribe_item USING btree (app_id, item_id, bucket_priority DESC, expires_at) WHERE (is_deleted = 0);
+CREATE INDEX idx_user_item_active_priority ON public.ubma_subscribe_item USING btree (tenant_id, item_id, bucket_priority DESC, expires_at) WHERE (is_deleted = 0);
 CREATE UNIQUE INDEX uk_subscribe_item_source ON public.ubma_subscribe_item USING btree (subscribe_id, item_id, source_type) WHERE (is_deleted = 0);
 
 
@@ -271,10 +271,10 @@ CREATE TABLE ubma_unsubscribe (
     create_by varchar(68) NOT NULL DEFAULT '',
     update_by varchar(68) NOT NULL DEFAULT '',
     is_deleted smallint NOT NULL DEFAULT 0,
-    app_id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX idx_ubma_unsubscribe_app_id ON public.ubma_unsubscribe USING btree (app_id);
+CREATE INDEX idx_ubma_unsubscribe_tenant_id ON public.ubma_unsubscribe USING btree (tenant_id);
 CREATE INDEX idx_ubma_unsubscribe_ext ON public.ubma_unsubscribe USING gin (ext);
 
 

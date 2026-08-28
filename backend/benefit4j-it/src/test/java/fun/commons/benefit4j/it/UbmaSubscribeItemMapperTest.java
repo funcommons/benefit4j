@@ -17,9 +17,9 @@ public class UbmaSubscribeItemMapperTest extends BaseMapperTest {
 
     @Test
     public void testNextRefreshTimeNullable() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaSubscribeItem item = new UbmaSubscribeItem();
-        item.setAppId(appId);
+        item.setTenantId(tenantId);
         // 用雪花 id 避免 (subscribe_id, item_id, source_type=SUBSCRIPTION) 唯一约束冲突
         item.setSubscribeId(System.nanoTime());
         item.setItemId(System.nanoTime());
@@ -38,9 +38,9 @@ public class UbmaSubscribeItemMapperTest extends BaseMapperTest {
 
     @Test
     public void testOptimisticLockVersion() {
-        Long appId = createApp().getId();
+        Long tenantId = createTenant().getId();
         UbmaSubscribeItem item = new UbmaSubscribeItem();
-        item.setAppId(appId);
+        item.setTenantId(tenantId);
         item.setSubscribeId(System.nanoTime());
         item.setItemId(System.nanoTime());
         item.setTotalConsumed(0);

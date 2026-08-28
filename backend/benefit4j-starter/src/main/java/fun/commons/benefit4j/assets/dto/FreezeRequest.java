@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class FreezeRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 业务冻结单号(幂等键) */
     private String freezeNo;

@@ -69,7 +69,7 @@ public class AssetsFreezeService {
     }
 
     public FreezeView freeze(FreezeRequest req) {
-        if (req.getAppId() == null || req.getFreezeNo() == null || req.getFreezeNo().isBlank()
+        if (req.getTenantId() == null || req.getFreezeNo() == null || req.getFreezeNo().isBlank()
                 || req.getAccountRef() == null || req.getAssetCode() == null
                 || req.getAmount() == null || req.getAmount().signum() <= 0
                 || req.getReason() == null || !REASONS.contains(req.getReason())) {
@@ -81,17 +81,17 @@ public class AssetsFreezeService {
 
     private FreezeView doFreeze(FreezeRequest req) {
         // 先锁账户(account_id NOT NULL,抢占行须带账户);重放时账户必已存在
-        UbmxAccount resolved = accountService.resolveRef(req.getAppId(), req.getAccountRef(), req.getAssetCode());
+        UbmxAccount resolved = accountService.resolveRef(req.getTenantId(), req.getAccountRef(), req.getAssetCode());
         List<UbmxAccount> locked = accountMapper.lockByIds(List.of(resolved.getId()));
         if (locked.isEmpty() || !"ACTIVE".equals(locked.get(0).getStatus())) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "冻结账户不可用");
         }
         UbmxAccount acc = locked.get(0);
 
-        // freezeNo 幂等(uk app_id+freeze_no): 已有单据返回当前状态
+        // freezeNo 幂等(uk tenant_id+freeze_no): 已有单据返回当前状态
         UbmxFreeze row = new UbmxFreeze();
         row.setId(IdWorker.getId());
-        row.setAppId(req.getAppId());
+        row.setTenantId(req.getTenantId());
         row.setAccountId(acc.getId());
         row.setFreezeNo(req.getFreezeNo());
         row.setReason(req.getReason());
@@ -102,7 +102,7 @@ public class AssetsFreezeService {
             row.setExpireTime(OffsetDateTime.now().plusSeconds(req.getExpireSeconds()));
         }
         if (freezeMapper.insertIgnore(row) == 0) {
-            return viewOf(loadByNo(req.getAppId(), req.getFreezeNo()));
+            return viewOf(loadByNo(req.getTenantId(), req.getFreezeNo()));
         }
 
         if (acc.getBalance().compareTo(req.getAmount()) < 0) {
@@ -112,13 +112,13 @@ public class AssetsFreezeService {
         accountMapper.adjustBalanceAndFrozen(acc.getId(), req.getAmount().negate(), req.getAmount());
 
         // FREEZE 自环腿(审计)
-        insertPosting(IdWorker.getId(), "FREEZE", req.getAppId(), req.getFreezeNo(), req.getAssetCode(),
+        insertPosting(IdWorker.getId(), "FREEZE", req.getTenantId(), req.getFreezeNo(), req.getAssetCode(),
                 acc, acc, req.getAmount(), acc.getBalance().subtract(req.getAmount()));
         return viewOf(row);
     }
 
     public FreezeView unfreeze(UnfreezeRequest req) {
-        if (req.getAppId() == null || req.getFreezeNo() == null
+        if (req.getTenantId() == null || req.getFreezeNo() == null
                 || !"RELEASE".equals(req.getMode()) && !"CONSUME".equals(req.getMode())) {
             throw new AssetsException(AssetsException.ASSET_INVALID, "解冻参数非法(mode∈RELEASE|CONSUME)");
         }
@@ -129,7 +129,7 @@ public class AssetsFreezeService {
     }
 
     private FreezeView doUnfreeze(UnfreezeRequest req) {
-        UbmxFreeze row = loadByNo(req.getAppId(), req.getFreezeNo());
+        UbmxFreeze row = loadByNo(req.getTenantId(), req.getFreezeNo());
         if (row == null) {
             throw new AssetsException(AssetsException.FREEZE_NOT_FOUND, "冻结单不存在: " + req.getFreezeNo());
         }
@@ -149,14 +149,14 @@ public class AssetsFreezeService {
         // 账户侧挪回
         if ("RELEASE".equals(req.getMode())) {
             accountMapper.adjustBalanceAndFrozen(acc.getId(), release, release.negate());
-            insertPosting(IdWorker.getId(), "UNFREEZE", req.getAppId(), req.getFreezeNo(), acc.getAssetCode(),
+            insertPosting(IdWorker.getId(), "UNFREEZE", req.getTenantId(), req.getFreezeNo(), acc.getAssetCode(),
                     acc, acc, release, acc.getBalance().add(release));
         } else {
             // CONSUME: 提现成功语义,frozen 清,balance 不回;出账腿 user→credit:{asset}(BOUNDARY)
             accountMapper.adjustBalanceAndFrozen(acc.getId(), BigDecimal.ZERO, release.negate());
             UbmxAccount credit = accountService.getOrCreateBoundaryAccount(
-                    req.getAppId(), "credit:" + acc.getAssetCode(), acc.getAssetCode());
-            insertPosting(IdWorker.getId(), "CONSUME", req.getAppId(), req.getFreezeNo(), acc.getAssetCode(),
+                    req.getTenantId(), "credit:" + acc.getAssetCode(), acc.getAssetCode());
+            insertPosting(IdWorker.getId(), "CONSUME", req.getTenantId(), req.getFreezeNo(), acc.getAssetCode(),
                     acc, credit, release, acc.getBalance());
         }
 
@@ -176,9 +176,9 @@ public class AssetsFreezeService {
     }
 
     /** O14 一致性: account.frozen(缓存)== Σ(amount - used WHERE ACTIVE)(主数据) */
-    public boolean checkConsistency(Long appId, Long accountId) {
+    public boolean checkConsistency(Long tenantId, Long accountId) {
         List<UbmxFreeze> actives = freezeMapper.selectList(new LambdaQueryWrapper<UbmxFreeze>()
-                .eq(UbmxFreeze::getAppId, appId)
+                .eq(UbmxFreeze::getTenantId, tenantId)
                 .eq(UbmxFreeze::getAccountId, accountId)
                 .eq(UbmxFreeze::getStatus, "ACTIVE"));
         BigDecimal expected = actives.stream()
@@ -190,16 +190,16 @@ public class AssetsFreezeService {
 
     // ---------- helpers ----------
 
-    private UbmxFreeze loadByNo(Long appId, String freezeNo) {
+    private UbmxFreeze loadByNo(Long tenantId, String freezeNo) {
         return freezeMapper.selectOne(new LambdaQueryWrapper<UbmxFreeze>()
-                .eq(UbmxFreeze::getAppId, appId)
+                .eq(UbmxFreeze::getTenantId, tenantId)
                 .eq(UbmxFreeze::getFreezeNo, freezeNo));
     }
 
-    private void insertPosting(Long txId, String txType, Long appId, String orderId, String assetCode,
+    private void insertPosting(Long txId, String txType, Long tenantId, String orderId, String assetCode,
                                UbmxAccount src, UbmxAccount dst, BigDecimal amount, BigDecimal balanceAfter) {
         UbmxPosting p = new UbmxPosting();
-        p.setAppId(appId);
+        p.setTenantId(tenantId);
         p.setTxId(txId);
         p.setTxType(txType);
         p.setExtOrderId(orderId);

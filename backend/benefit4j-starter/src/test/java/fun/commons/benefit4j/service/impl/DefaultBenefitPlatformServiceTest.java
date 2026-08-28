@@ -24,7 +24,7 @@ public class DefaultBenefitPlatformServiceTest {
     @InjectMocks
     private DefaultBenefitPlatformService service;
 
-    @Mock private UbmaApplicationMapper applicationMapper;
+    @Mock private UbmaTenantMapper applicationMapper;
     @Mock private UbmaBenefitItemMapper benefitItemMapper;
     @Mock private UbmaBenefitSetMapper benefitSetMapper;
     @Mock private UbmpBenefitTmplSetMapper benefitTmplSetMapper;
@@ -38,7 +38,7 @@ public class DefaultBenefitPlatformServiceTest {
         MybatisConfiguration configuration = new MybatisConfiguration();
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
         assistant.setCurrentNamespace("test");
-        TableInfoHelper.initTableInfo(assistant, UbmaApplication.class);
+        TableInfoHelper.initTableInfo(assistant, UbmaTenant.class);
         TableInfoHelper.initTableInfo(assistant, UbmpBenefitTmplSet.class);
         TableInfoHelper.initTableInfo(assistant, UbmpBenefitTmplRef.class);
         TableInfoHelper.initTableInfo(assistant, UbmpBenefitTmplItem.class);
@@ -49,37 +49,37 @@ public class DefaultBenefitPlatformServiceTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    // === Applications ===
+    // === Tenants ===
 
     @Test
-    void testPostApplications_Success() {
-        doReturn(1).when(applicationMapper).insert(any(UbmaApplication.class));
+    void testPostTenants_Success() {
+        doReturn(1).when(applicationMapper).insert(any(UbmaTenant.class));
 
-        PostApplicationsRequest req = new PostApplicationsRequest();
+        PostTenantsRequest req = new PostTenantsRequest();
         req.setName("测试应用");
 
-        ApiResponse<?> resp = (ApiResponse<?>) service.postApplications(req);
+        ApiResponse<?> resp = (ApiResponse<?>) service.postTenants(req);
         assertThat(resp.isSuccess()).isTrue();
-        verify(applicationMapper).insert(any(UbmaApplication.class));
+        verify(applicationMapper).insert(any(UbmaTenant.class));
     }
 
     @Test
-    void testGetApplications_Success() {
-        when(applicationMapper.selectList(any())).thenReturn(List.of(new UbmaApplication()));
-        ApiResponse<?> resp = (ApiResponse<?>) service.getApplications();
+    void testGetTenants_Success() {
+        when(applicationMapper.selectList(any())).thenReturn(List.of(new UbmaTenant()));
+        ApiResponse<?> resp = (ApiResponse<?>) service.getTenants();
         assertThat(resp.isSuccess()).isTrue();
     }
 
     @Test
-    void testPutApplicationsAppId_Success() {
-        UbmaApplication app = new UbmaApplication();
+    void testPutTenantsTenantId_Success() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         when(applicationMapper.selectById(1L)).thenReturn(app);
         when(applicationMapper.update(any(), any())).thenReturn(1);
 
-        PutApplicationsAppIdRequest req = new PutApplicationsAppIdRequest();
+        PutTenantsTenantIdRequest req = new PutTenantsTenantIdRequest();
         req.setName("新名称");
-        ApiResponse<?> resp = (ApiResponse<?>) service.putApplicationsAppId(1L, req);
+        ApiResponse<?> resp = (ApiResponse<?>) service.putTenantsTenantId(1L, req);
         assertThat(resp.isSuccess()).isTrue();
     }
 
@@ -236,14 +236,14 @@ public class DefaultBenefitPlatformServiceTest {
     void testGetPlatformItems_WithFilters() {
         UbmaBenefitItem item = new UbmaBenefitItem();
         item.setId(1001L);
-        item.setAppId(1L);
+        item.setTenantId(1L);
         item.setName("免邮特权");
         item.setIcon("ri-truck-line");
         item.setDescription("每月 4 次免邮, 单次订单不限金额");
         item.setDefaultDeduction(1);
         item.setStatus("ACTIVE");
 
-        UbmaApplication app = new UbmaApplication();
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         app.setName("官方租户");
 
@@ -271,7 +271,7 @@ public class DefaultBenefitPlatformServiceTest {
         assertThat(rows).hasSize(1);
         java.util.Map<String, Object> row = rows.get(0);
         assertThat(row.get("id")).isEqualTo(IdObfuscator.toOpenId(1001L));
-        assertThat(row.get("app_id")).isEqualTo(IdObfuscator.toOpenId(1L));
+        assertThat(row.get("tenant_id")).isEqualTo(IdObfuscator.toOpenId(1L));
         assertThat(row.get("tenant_name")).isEqualTo("官方租户");
         assertThat(row.get("quota")).isEqualTo(10000);
         assertThat(row.get("used")).isEqualTo(7320);
@@ -311,7 +311,7 @@ public class DefaultBenefitPlatformServiceTest {
     void testGetPlatformBenefitSets_ReadsFromUbmaBenefitSet() {
         UbmaBenefitSet set = new UbmaBenefitSet();
         set.setId(2001L);
-        set.setAppId(1L);
+        set.setTenantId(1L);
         set.setName("标准VIP包");
         set.setDuration(1);
         set.setDurationUnit("month");
@@ -321,7 +321,7 @@ public class DefaultBenefitPlatformServiceTest {
         set.setRefreshCycleUnit("month");
         set.setStatus("ACTIVE");
 
-        UbmaApplication app = new UbmaApplication();
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         app.setName("官方租户");
 
@@ -346,7 +346,7 @@ public class DefaultBenefitPlatformServiceTest {
         assertThat(list).hasSize(1);
         java.util.Map<String, Object> row = list.get(0);
         assertThat(row.get("id")).isEqualTo(IdObfuscator.toOpenId(2001L));
-        assertThat(row.get("app_id")).isEqualTo(IdObfuscator.toOpenId(1L));
+        assertThat(row.get("tenant_id")).isEqualTo(IdObfuscator.toOpenId(1L));
         assertThat(row.get("tenant_name")).isEqualTo("官方租户");
         assertThat(row.get("name")).isEqualTo("标准VIP包");
         assertThat(row.get("subscribe_count")).isEqualTo(1);
@@ -476,65 +476,65 @@ public class DefaultBenefitPlatformServiceTest {
     // === Application Secret Reset ===
 
     @Test
-    void testPostApplicationsAppIdSecret_Success() {
-        UbmaApplication app = new UbmaApplication();
+    void testPostTenantsTenantIdSecret_Success() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
-        app.setAppSecret("old-secret");
+        app.setTenantSecret("old-secret");
         when(applicationMapper.selectById(1L)).thenReturn(app);
         when(applicationMapper.update(any(), any())).thenReturn(1);
 
-        ApiResponse<?> resp = (ApiResponse<?>) service.postApplicationsAppIdSecret(1L);
+        ApiResponse<?> resp = (ApiResponse<?>) service.postTenantsTenantIdSecret(1L);
         assertThat(resp.isSuccess()).isTrue();
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> data = (java.util.Map<String, Object>) resp.getData();
         assertThat(data.get("id")).isEqualTo(IdObfuscator.toOpenId(1L));
-        assertThat(data.get("app_secret").toString()).isNotEqualTo("old-secret");
+        assertThat(data.get("tenant_secret").toString()).isNotEqualTo("old-secret");
     }
 
     @Test
-    void testPostApplicationsAppIdSecret_NotFound() {
+    void testPostTenantsTenantIdSecret_NotFound() {
         when(applicationMapper.selectById(anyLong())).thenReturn(null);
-        ApiResponse<?> resp = (ApiResponse<?>) service.postApplicationsAppIdSecret(999L);
+        ApiResponse<?> resp = (ApiResponse<?>) service.postTenantsTenantIdSecret(999L);
         assertThat(resp.isFail()).isTrue();
     }
 
     @Test
-    void testGetApplicationsAppIdSecret_Success() {
-        UbmaApplication app = new UbmaApplication();
+    void testGetTenantsTenantIdSecret_Success() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         app.setName("测试");
-        app.setAppSecret("real-plaintext-secret");
+        app.setTenantSecret("real-plaintext-secret");
         when(applicationMapper.selectById(1L)).thenReturn(app);
 
-        ApiResponse<?> resp = (ApiResponse<?>) service.getApplicationsAppIdSecret(1L);
+        ApiResponse<?> resp = (ApiResponse<?>) service.getTenantsTenantIdSecret(1L);
         assertThat(resp.isSuccess()).isTrue();
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> data = (java.util.Map<String, Object>) resp.getData();
-        assertThat(data.get("app_secret")).isEqualTo("real-plaintext-secret");
+        assertThat(data.get("tenant_secret")).isEqualTo("real-plaintext-secret");
     }
 
     @Test
-    void testGetApplicationsAppIdSecret_NotFound() {
+    void testGetTenantsTenantIdSecret_NotFound() {
         when(applicationMapper.selectById(anyLong())).thenReturn(null);
-        ApiResponse<?> resp = (ApiResponse<?>) service.getApplicationsAppIdSecret(999L);
+        ApiResponse<?> resp = (ApiResponse<?>) service.getTenantsTenantIdSecret(999L);
         assertThat(resp.isFail()).isTrue();
     }
 
     @Test
-    void testGetApplications_MasksSecret() {
-        UbmaApplication app = new UbmaApplication();
+    void testGetTenants_MasksSecret() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         app.setName("测试");
-        app.setAppSecret("abcdef1234567890abcdef1234567890");
+        app.setTenantSecret("abcdef1234567890abcdef1234567890");
         when(applicationMapper.selectList(any())).thenReturn(List.of(app));
         when(subscribeMapper.selectList(any())).thenReturn(List.of());
 
-        ApiResponse<?> resp = (ApiResponse<?>) service.getApplications();
+        ApiResponse<?> resp = (ApiResponse<?>) service.getTenants();
         assertThat(resp.isSuccess()).isTrue();
         @SuppressWarnings("unchecked")
         List<java.util.Map<String, Object>> rows = (List<java.util.Map<String, Object>>) resp.getData();
         assertThat(rows).hasSize(1);
-        String masked = (String) rows.get(0).get("app_secret");
+        String masked = (String) rows.get(0).get("tenant_secret");
         assertThat(masked).contains("•");
         assertThat(masked).isNotEqualTo("abcdef1234567890abcdef1234567890");
     }
@@ -542,12 +542,12 @@ public class DefaultBenefitPlatformServiceTest {
     // === Application Description ===
 
     @Test
-    void testPostApplications_WithDescription() {
-        doReturn(1).when(applicationMapper).insert(any(UbmaApplication.class));
-        PostApplicationsRequest req = new PostApplicationsRequest();
+    void testPostTenants_WithDescription() {
+        doReturn(1).when(applicationMapper).insert(any(UbmaTenant.class));
+        PostTenantsRequest req = new PostTenantsRequest();
         req.setName("测试应用");
         req.setDescription("示例描述");
-        ApiResponse<?> resp = (ApiResponse<?>) service.postApplications(req);
+        ApiResponse<?> resp = (ApiResponse<?>) service.postTenants(req);
         assertThat(resp.isSuccess()).isTrue();
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> data = (java.util.Map<String, Object>) resp.getData();
@@ -555,16 +555,16 @@ public class DefaultBenefitPlatformServiceTest {
     }
 
     @Test
-    void testGetApplications_WithSubscriptionCount() {
-        UbmaApplication app = new UbmaApplication();
+    void testGetTenants_WithSubscriptionCount() {
+        UbmaTenant app = new UbmaTenant();
         app.setId(1L);
         app.setName("测试");
         app.setDescription("desc");
         UbmaSubscribe sub = new UbmaSubscribe();
-        sub.setAppId(1L);
+        sub.setTenantId(1L);
         when(applicationMapper.selectList(any())).thenReturn(List.of(app));
         when(subscribeMapper.selectList(any())).thenReturn(List.of(sub, sub));
-        ApiResponse<?> resp = (ApiResponse<?>) service.getApplications();
+        ApiResponse<?> resp = (ApiResponse<?>) service.getTenants();
         assertThat(resp.isSuccess()).isTrue();
         @SuppressWarnings("unchecked")
         List<java.util.Map<String, Object>> rows = (List<java.util.Map<String, Object>>) resp.getData();

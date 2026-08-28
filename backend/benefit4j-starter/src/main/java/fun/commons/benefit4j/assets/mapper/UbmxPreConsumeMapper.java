@@ -18,18 +18,18 @@ public interface UbmxPreConsumeMapper extends BaseMapper<UbmxPreConsume> {
      * 预扣幂等抢占: PG 事务内唯一键冲突会 abort 事务,ON CONFLICT DO NOTHING 判行数。
      */
     @Insert("/*traceid=assets,topic=pre_consume*/ "
-            + "INSERT INTO ubmx_pre_consume (id, app_id, request_id, tx_id, charge_mode, user_account_id, "
+            + "INSERT INTO ubmx_pre_consume (id, tenant_id, request_id, tx_id, charge_mode, user_account_id, "
             + "asset_code, estimated, status, expire_time) "
-            + "VALUES (#{id}, #{appId}, #{requestId}, #{txId}, #{chargeMode}, #{userAccountId}, "
+            + "VALUES (#{id}, #{tenantId}, #{requestId}, #{txId}, #{chargeMode}, #{userAccountId}, "
             + "#{assetCode}, #{estimated}, 'RESERVED', #{expireTime}) "
-            + "ON CONFLICT (app_id, request_id) DO NOTHING")
+            + "ON CONFLICT (tenant_id, request_id) DO NOTHING")
     int insertIgnore(UbmxPreConsume pc);
 
     /**
      * 过期扫描(不加锁,终态 guard 兜底;多实例重复尝试无副作用)。
      */
     @Select("/*traceid=assets,topic=pre_expire_scan*/ "
-            + "SELECT id, app_id, request_id, tx_id, charge_mode, user_account_id, tenant_account_id, "
+            + "SELECT id, tenant_id, request_id, tx_id, charge_mode, user_account_id, tenant_account_id, "
             + "asset_code, estimated, settled_amount, status, expire_time, created_at, updated_at "
             + "FROM ubmx_pre_consume WHERE status = 'RESERVED' AND expire_time < CURRENT_TIMESTAMP "
             + "ORDER BY id LIMIT #{limit}")

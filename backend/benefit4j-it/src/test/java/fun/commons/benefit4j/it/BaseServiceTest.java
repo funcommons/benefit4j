@@ -25,13 +25,13 @@ public abstract class BaseServiceTest extends BaseMapperTest {
     @Autowired protected UbmaCompensationMapper compensationMapper;
     @Autowired protected UbmaUnsubscribeMapper unsubscribeMapper;
 
-    protected UbmaBenefitItem createBenefitItem(Long appId) {
-        return createBenefitItem(appId, "Item-" + uniqueAppid());
+    protected UbmaBenefitItem createBenefitItem(Long tenantId) {
+        return createBenefitItem(tenantId, "Item-" + uniqueTenantid());
     }
 
-    protected UbmaBenefitItem createBenefitItem(Long appId, String name) {
+    protected UbmaBenefitItem createBenefitItem(Long tenantId, String name) {
         UbmaBenefitItem item = new UbmaBenefitItem();
-        item.setAppId(appId);
+        item.setTenantId(tenantId);
         item.setName(name);
         item.setStatus("ACTIVE");
         item.setDefaultDeduction(1);
@@ -41,18 +41,18 @@ public abstract class BaseServiceTest extends BaseMapperTest {
         return item;
     }
 
-    protected UbmaBenefitSet createBenefitSet(Long appId, Long... itemIds) {
-        return createBenefitSet(appId, 30, 10, itemIds);
+    protected UbmaBenefitSet createBenefitSet(Long tenantId, Long... itemIds) {
+        return createBenefitSet(tenantId, 30, 10, itemIds);
     }
 
-    protected UbmaBenefitSet createBenefitSet(Long appId, int quota, int priority, Long... itemIds) {
-        return createBenefitSet(appId, quota, priority, 10, itemIds);
+    protected UbmaBenefitSet createBenefitSet(Long tenantId, int quota, int priority, Long... itemIds) {
+        return createBenefitSet(tenantId, quota, priority, 10, itemIds);
     }
 
-    protected UbmaBenefitSet createBenefitSet(Long appId, int quota, int priority, int refQuota, Long... itemIds) {
+    protected UbmaBenefitSet createBenefitSet(Long tenantId, int quota, int priority, int refQuota, Long... itemIds) {
         UbmaBenefitSet set = new UbmaBenefitSet();
-        set.setAppId(appId);
-        set.setName("Set-" + uniqueAppid());
+        set.setTenantId(tenantId);
+        set.setName("Set-" + uniqueTenantid());
         set.setDuration(1);
         set.setDurationUnit("month");
         set.setQuota(quota);
@@ -66,7 +66,7 @@ public abstract class BaseServiceTest extends BaseMapperTest {
 
         for (Long itemId : itemIds) {
             UbmaBenefitRef ref = new UbmaBenefitRef();
-            ref.setAppId(appId);
+            ref.setTenantId(tenantId);
             ref.setSetId(set.getId());
             ref.setItemId(itemId);
             ref.setQuota(refQuota);
@@ -79,13 +79,13 @@ public abstract class BaseServiceTest extends BaseMapperTest {
         return set;
     }
 
-    protected String createSubscription(Long appId, String userid, Long setId) {
+    protected String createSubscription(Long tenantId, String userid, Long setId) {
         PostSubscriptionsRequest req = new PostSubscriptionsRequest();
         req.setUserid(userid);
         req.setSetId(String.valueOf(setId));
-        req.setExternalOrderId("ext-sub-" + uniqueAppid());
+        req.setExternalOrderId("ext-sub-" + uniqueTenantid());
 
-        Map<String, Object> data = extractData(runtimeService.postSubscriptions(appId, req));
+        Map<String, Object> data = extractData(runtimeService.postSubscriptions(tenantId, req));
         return (String) data.get("subscribe_id");
     }
 

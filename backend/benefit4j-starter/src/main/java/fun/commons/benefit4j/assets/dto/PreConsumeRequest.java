@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class PreConsumeRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 调用方幂等键,贯穿 pre-consume/settle/refund 三阶段 */
     private String requestId;

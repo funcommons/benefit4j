@@ -15,9 +15,9 @@ public interface UbmxTxOrderMapper extends BaseMapper<UbmxTxOrder> {
      * 必须用 ON CONFLICT DO NOTHING 判返回行数: 1=抢占成功,0=已被占用(随后 SELECT 读旧行回放/判冲突)。
      */
     @Insert("/*traceid=assets,topic=tx_gate*/ "
-            + "INSERT INTO ubmx_tx_order (id, app_id, ext_order_id, tx_type, tx_id, status) "
-            + "VALUES (#{id}, #{appId}, #{extOrderId}, #{txType}, #{txId}, #{status}) "
-            + "ON CONFLICT (app_id, ext_order_id) DO NOTHING")
+            + "INSERT INTO ubmx_tx_order (id, tenant_id, ext_order_id, tx_type, tx_id, status) "
+            + "VALUES (#{id}, #{tenantId}, #{extOrderId}, #{txType}, #{txId}, #{status}) "
+            + "ON CONFLICT (tenant_id, ext_order_id) DO NOTHING")
     int insertIgnore(UbmxTxOrder gate);
 
     /** O6 幂等释放: SUCCESS → FAILED(仅 OPS 纠错;FAILED 键引擎侧永久禁用防双记) */
@@ -25,7 +25,7 @@ public interface UbmxTxOrderMapper extends BaseMapper<UbmxTxOrder> {
             + "UPDATE ubmx_tx_order SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP, "
             + "result_snapshot = COALESCE(result_snapshot, '{}'::jsonb) "
             + "|| jsonb_build_object('releaseReason', #{reason}::text) "
-            + "WHERE app_id = #{appId} AND ext_order_id = #{extOrderId} AND status = 'SUCCESS'")
-    int releaseKey(@Param("appId") Long appId, @Param("extOrderId") String extOrderId,
+            + "WHERE tenant_id = #{tenantId} AND ext_order_id = #{extOrderId} AND status = 'SUCCESS'")
+    int releaseKey(@Param("tenantId") Long tenantId, @Param("extOrderId") String extOrderId,
                    @Param("reason") String reason);
 }

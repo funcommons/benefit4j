@@ -13,10 +13,10 @@ public interface UbmxFreezeMapper extends BaseMapper<UbmxFreeze> {
      * ON CONFLICT DO NOTHING 判行数,0=已被占用(读旧行返回当前状态)。
      */
     @Insert("/*traceid=assets,topic=freeze_gate*/ "
-            + "INSERT INTO ubmx_freeze (id, app_id, account_id, freeze_no, reason, amount, used_amount, "
+            + "INSERT INTO ubmx_freeze (id, tenant_id, account_id, freeze_no, reason, amount, used_amount, "
             + "status, expire_time) "
-            + "VALUES (#{id}, #{appId}, #{accountId}, #{freezeNo}, #{reason}, #{amount}, #{usedAmount}, "
+            + "VALUES (#{id}, #{tenantId}, #{accountId}, #{freezeNo}, #{reason}, #{amount}, #{usedAmount}, "
             + "#{status}, #{expireTime}) "
-            + "ON CONFLICT (app_id, freeze_no) DO NOTHING")
+            + "ON CONFLICT (tenant_id, freeze_no) DO NOTHING")
     int insertIgnore(UbmxFreeze row);
 }

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class SettleRequest {
 
-    private Long appId;
+    private Long tenantId;
 
     /** 与 pre-consume 相同的幂等键 */
     private String requestId;

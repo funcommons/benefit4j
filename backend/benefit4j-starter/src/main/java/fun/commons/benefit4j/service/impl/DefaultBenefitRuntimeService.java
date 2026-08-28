@@ -28,7 +28,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     private final UbmaBenefitSetMapper benefitSetMapper;
     private final UbmaBenefitRefMapper benefitRefMapper;
     private final UbmaConsumeMapper consumeMapper;
-    private final UbmaApplicationMapper applicationMapper;
+    private final UbmaTenantMapper applicationMapper;
     private final UbmaRefundMapper refundMapper;
     private final UbmaUnsubscribeMapper unsubscribeMapper;
     private final UbmaOutboxMapper outboxMapper;
@@ -38,10 +38,10 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     @Transactional
     @Auditable(action = "SUBSCRIPTION_CREATE", targetType = "subscribe",
             targetIdSpel = "#req.externalOrderId")
-    public Object postSubscriptions(Long appId, PostSubscriptionsRequest req) {
+    public Object postSubscriptions(Long tenantId, PostSubscriptionsRequest req) {
         // 1. 幂等检查
         LambdaQueryWrapper<UbmaSubscribe> idempotentQuery = new LambdaQueryWrapper<>();
-        idempotentQuery.eq(UbmaSubscribe::getAppId, appId)
+        idempotentQuery.eq(UbmaSubscribe::getTenantId, tenantId)
                 .eq(UbmaSubscribe::getExternalOrderId, req.getExternalOrderId());
         UbmaSubscribe existing = subscribeMapper.selectOne(idempotentQuery);
         if (existing != null) {
@@ -52,7 +52,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         Long setId = safeParseId(req.getSetId());
         if (setId == null) return ApiResponse.fail(400, "无效的权益集ID");
         UbmaBenefitSet set = benefitSetMapper.selectById(setId);
-        if (set == null || !set.getAppId().equals(appId)) {
+        if (set == null || !set.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "权益集不存在");
         }
         if (!"ACTIVE".equals(set.getStatus())) {
@@ -61,7 +61,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 3. 查询权益集包含的条目
         LambdaQueryWrapper<UbmaBenefitRef> refQuery = new LambdaQueryWrapper<>();
-        refQuery.eq(UbmaBenefitRef::getAppId, appId)
+        refQuery.eq(UbmaBenefitRef::getTenantId, tenantId)
                 .eq(UbmaBenefitRef::getSetId, set.getId());
         List<UbmaBenefitRef> refs = benefitRefMapper.selectList(refQuery);
         if (refs.isEmpty()) {
@@ -76,7 +76,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 5. 创建主订阅记录
         UbmaSubscribe subscribe = new UbmaSubscribe();
-        subscribe.setAppId(appId);
+        subscribe.setTenantId(tenantId);
         subscribe.setUserid(req.getUserid());
         subscribe.setSetId(set.getId());
         subscribe.setExternalOrderId(req.getExternalOrderId());
@@ -96,7 +96,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         // 6. 创建条目级订阅明细 (V1.2.0: 桶字段从 set 拷贝 sourceType / bucketPriority / expiresAt)
         for (UbmaBenefitRef ref : refs) {
             UbmaSubscribeItem item = new UbmaSubscribeItem();
-            item.setAppId(appId);
+            item.setTenantId(tenantId);
             item.setSubscribeId(subscribe.getId());
             item.setItemId(ref.getItemId());
             item.setTotalConsumed(0);
@@ -117,11 +117,11 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
     @Override
     @Transactional
-    public Object postSubscriptionsCancel(Long appId, PostSubscriptionsCancelRequest req) {
+    public Object postSubscriptionsCancel(Long tenantId, PostSubscriptionsCancelRequest req) {
         Long subId = safeParseId(req.getSubscribeId());
         if (subId == null) return ApiResponse.fail(400, "无效的订阅ID");
         UbmaSubscribe subscribe = subscribeMapper.selectById(subId);
-        if (subscribe == null || !subscribe.getAppId().equals(appId)) {
+        if (subscribe == null || !subscribe.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "订阅记录不存在");
         }
         if (!"ACTIVE".equals(subscribe.getStatus())) {
@@ -149,7 +149,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 创建退订快照记录
         UbmaUnsubscribe unsubscribe = new UbmaUnsubscribe();
-        unsubscribe.setAppId(appId);
+        unsubscribe.setTenantId(tenantId);
         unsubscribe.setSubscribeId(subscribe.getId());
         unsubscribe.setExternalOrderId(req.getExternalOrderId());
         unsubscribe.setReason(req.getReason());
@@ -164,11 +164,11 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     }
 
     @Override
-    public Object getSubscriptionsSubscribeId(Long appId, String subscribeId) {
+    public Object getSubscriptionsSubscribeId(Long tenantId, String subscribeId) {
         Long subId = safeParseId(subscribeId);
         if (subId == null) return ApiResponse.fail(400, "无效的订阅ID");
         UbmaSubscribe subscribe = subscribeMapper.selectById(subId);
-        if (subscribe == null || !subscribe.getAppId().equals(appId)) {
+        if (subscribe == null || !subscribe.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "订阅记录不存在");
         }
 
@@ -184,13 +184,13 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     @Transactional
     @Auditable(action = "CONSUME_DIRECT", targetType = "consume",
             targetIdSpel = "#req.externalOrderId")
-    public Object postConsumesDirect(Long appId, PostConsumesDirectRequest req) {
+    public Object postConsumesDirect(Long tenantId, PostConsumesDirectRequest req) {
         int consumeNum = req.getConsumeNum() != null ? req.getConsumeNum() : 1;
         if (consumeNum <= 0) return ApiResponse.fail(400, "消费数量必须大于0");
 
         // 1. 幂等检查
         LambdaQueryWrapper<UbmaConsume> idempotentQuery = new LambdaQueryWrapper<>();
-        idempotentQuery.eq(UbmaConsume::getAppId, appId)
+        idempotentQuery.eq(UbmaConsume::getTenantId, tenantId)
                 .eq(UbmaConsume::getExternalOrderId, req.getExternalOrderId());
         List<UbmaConsume> existingConsumes = consumeMapper.selectList(idempotentQuery);
         if (!existingConsumes.isEmpty()) {
@@ -204,7 +204,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         // 2. 查询用户所有包含该item的ACTIVE订阅
         Long itemId = safeParseId(req.getItemId());
         if (itemId == null) return ApiResponse.fail(400, "无效的权益项ID");
-        List<UbmaSubscribeItem> candidates = findDeductionCandidates(appId, req.getUserid(), itemId);
+        List<UbmaSubscribeItem> candidates = findDeductionCandidates(tenantId, req.getUserid(), itemId);
         if (candidates.isEmpty()) {
             return ApiResponse.fail(400, "用户没有可用的该权益项");
         }
@@ -276,7 +276,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
             // 为每个订阅项创建独立的消费流水
             UbmaConsume consume = new UbmaConsume();
-            consume.setAppId(appId);
+            consume.setTenantId(tenantId);
             consume.setSubsItemId(item.getId());
             consume.setItemId(itemId);
             consume.setExternalOrderId(consumeSeq == 0 ? req.getExternalOrderId() : req.getExternalOrderId() + "--" + consumeSeq);
@@ -343,13 +343,13 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
     @Override
     @Transactional
-    public Object postConsumesReserve(Long appId, PostConsumesReserveRequest req) {
+    public Object postConsumesReserve(Long tenantId, PostConsumesReserveRequest req) {
         int consumeNum = req.getConsumeNum() != null ? req.getConsumeNum() : 1;
         if (consumeNum <= 0) return ApiResponse.fail(400, "消费数量必须大于0");
 
         // 1. 幂等检查
         LambdaQueryWrapper<UbmaConsume> idempotentQuery = new LambdaQueryWrapper<>();
-        idempotentQuery.eq(UbmaConsume::getAppId, appId)
+        idempotentQuery.eq(UbmaConsume::getTenantId, tenantId)
                 .eq(UbmaConsume::getExternalOrderId, req.getExternalOrderId());
         List<UbmaConsume> existingConsumes = consumeMapper.selectList(idempotentQuery);
         if (!existingConsumes.isEmpty()) {
@@ -364,7 +364,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         // 2. 查询用户所有包含该item的ACTIVE订阅（按优先级排序）
         Long itemId = safeParseId(req.getItemId());
         if (itemId == null) return ApiResponse.fail(400, "无效的权益项ID");
-        List<UbmaSubscribeItem> candidates = findDeductionCandidates(appId, req.getUserid(), itemId);
+        List<UbmaSubscribeItem> candidates = findDeductionCandidates(tenantId, req.getUserid(), itemId);
         if (candidates.isEmpty()) {
             return ApiResponse.fail(400, "用户没有可用的该权益项");
         }
@@ -400,7 +400,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
             // 为每个订阅项创建独立的RESERVED消费流水
             UbmaConsume consume = new UbmaConsume();
-            consume.setAppId(appId);
+            consume.setTenantId(tenantId);
             consume.setSubsItemId(item.getId());
             consume.setItemId(itemId);
             consume.setExternalOrderId(req.getExternalOrderId());
@@ -452,10 +452,10 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
     @Override
     @Transactional
-    public Object postConsumesCommit(Long appId, PostConsumesCommitRequest req) {
+    public Object postConsumesCommit(Long tenantId, PostConsumesCommitRequest req) {
         // 1. 查找所有RESERVED消费记录（跨订阅扣减会产生多条）
         LambdaQueryWrapper<UbmaConsume> query = new LambdaQueryWrapper<>();
-        query.eq(UbmaConsume::getAppId, appId)
+        query.eq(UbmaConsume::getTenantId, tenantId)
                 .eq(UbmaConsume::getExternalOrderId, req.getExternalOrderId());
         List<UbmaConsume> consumes = consumeMapper.selectList(query);
         if (consumes.isEmpty()) {
@@ -485,7 +485,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         Map<Long, Integer> subCommitMap = new LinkedHashMap<>(); // subscribeId → commit amount
         for (UbmaConsume consume : reservedConsumes) {
             UbmaSubscribeItem item = subscribeItemMapper.selectById(consume.getSubsItemId());
-            if (item == null || !item.getAppId().equals(appId)) continue;
+            if (item == null || !item.getTenantId().equals(tenantId)) continue;
 
             LambdaUpdateWrapper<UbmaSubscribeItem> itemWrapper = new LambdaUpdateWrapper<>();
             itemWrapper.eq(UbmaSubscribeItem::getId, item.getId())
@@ -535,10 +535,10 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
     @Override
     @Transactional
-    public Object postConsumesRelease(Long appId, PostConsumesReleaseRequest req) {
+    public Object postConsumesRelease(Long tenantId, PostConsumesReleaseRequest req) {
         // 1. 查找所有RESERVED消费记录（跨订阅扣减会产生多条）
         LambdaQueryWrapper<UbmaConsume> query = new LambdaQueryWrapper<>();
-        query.eq(UbmaConsume::getAppId, appId)
+        query.eq(UbmaConsume::getTenantId, tenantId)
                 .eq(UbmaConsume::getExternalOrderId, req.getExternalOrderId());
         List<UbmaConsume> consumes = consumeMapper.selectList(query);
         if (consumes.isEmpty()) {
@@ -567,7 +567,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         Map<Long, Integer> subReleaseMap = new LinkedHashMap<>(); // subscribeId → release amount
         for (UbmaConsume consume : reservedConsumes) {
             UbmaSubscribeItem item = subscribeItemMapper.selectById(consume.getSubsItemId());
-            if (item == null || !item.getAppId().equals(appId)) continue;
+            if (item == null || !item.getTenantId().equals(tenantId)) continue;
 
             LambdaUpdateWrapper<UbmaSubscribeItem> itemWrapper = new LambdaUpdateWrapper<>();
             itemWrapper.eq(UbmaSubscribeItem::getId, item.getId())
@@ -611,12 +611,12 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     @Override
     @Transactional
     @Auditable(action = "REFUND", targetType = "refund", targetIdSpel = "#req.externalRefundId")
-    public Object postRefunds(Long appId, PostRefundsRequest req) {
+    public Object postRefunds(Long tenantId, PostRefundsRequest req) {
         // 1. 查找消费记录
         Long consumeId = safeParseId(req.getConsumeId());
         if (consumeId == null) return ApiResponse.fail(400, "无效的消费ID");
         UbmaConsume consume = consumeMapper.selectById(consumeId);
-        if (consume == null || !consume.getAppId().equals(appId)) {
+        if (consume == null || !consume.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "消费记录不存在");
         }
         if (!"COMMITTED".equals(consume.getStatus())) {
@@ -625,7 +625,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 2. 幂等检查
         LambdaQueryWrapper<UbmaRefund> idempotentQuery = new LambdaQueryWrapper<>();
-        idempotentQuery.eq(UbmaRefund::getAppId, appId)
+        idempotentQuery.eq(UbmaRefund::getTenantId, tenantId)
                 .eq(UbmaRefund::getExternalRefundId, req.getExternalRefundId());
         UbmaRefund existingRefund = refundMapper.selectOne(idempotentQuery);
         if (existingRefund != null) {
@@ -652,7 +652,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 3. 条目级：回退已消费
         UbmaSubscribeItem item = subscribeItemMapper.selectById(consume.getSubsItemId());
-        if (item == null || !item.getAppId().equals(appId)) {
+        if (item == null || !item.getTenantId().equals(tenantId)) {
             return ApiResponse.fail(404, "订阅明细不存在");
         }
         LambdaUpdateWrapper<UbmaSubscribeItem> itemWrapper = new LambdaUpdateWrapper<>();
@@ -706,7 +706,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
         // 5. 创建退款记录
         UbmaRefund refund = new UbmaRefund();
-        refund.setAppId(appId);
+        refund.setTenantId(tenantId);
         refund.setConsumeId(consume.getId());
         refund.setExternalRefundId(req.getExternalRefundId());
         refund.setRefundNum(refundNum);
@@ -730,9 +730,9 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     }
 
     @Override
-    public Object getUsersUseridAssets(Long appId, String userid) {
+    public Object getUsersUseridAssets(Long tenantId, String userid) {
         LambdaQueryWrapper<UbmaSubscribe> query = new LambdaQueryWrapper<>();
-        query.eq(UbmaSubscribe::getAppId, appId)
+        query.eq(UbmaSubscribe::getTenantId, tenantId)
                 .eq(UbmaSubscribe::getUserid, userid)
                 .orderByDesc(UbmaSubscribe::getCreatedAt);
         List<UbmaSubscribe> subscribes = subscribeMapper.selectList(query);
@@ -748,10 +748,10 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
     }
 
     @Override
-    public Object getUsersUseridConsumes(Long appId, String userid) {
+    public Object getUsersUseridConsumes(Long tenantId, String userid) {
         // 查找用户的所有订阅ID
         LambdaQueryWrapper<UbmaSubscribe> subQuery = new LambdaQueryWrapper<>();
-        subQuery.eq(UbmaSubscribe::getAppId, appId)
+        subQuery.eq(UbmaSubscribe::getTenantId, tenantId)
                 .eq(UbmaSubscribe::getUserid, userid);
         List<UbmaSubscribe> subscribes = subscribeMapper.selectList(subQuery);
 
@@ -782,7 +782,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         for (UbmaConsume c : consumes) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("consume_id", IdObfuscator.toOpenId(c.getId()));
-            row.put("app_id", IdObfuscator.toOpenId(c.getAppId()));
+            row.put("tenant_id", IdObfuscator.toOpenId(c.getTenantId()));
             row.put("subs_item_id", IdObfuscator.toOpenId(c.getSubsItemId()));
             row.put("item_id", IdObfuscator.toOpenId(c.getItemId()));
             row.put("external_order_id", c.getExternalOrderId());
@@ -844,7 +844,7 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
 
     // ========== Private helpers ==========
 
-    private List<UbmaSubscribeItem> findDeductionCandidates(Long appId, String userid, Long itemId) {
+    private List<UbmaSubscribeItem> findDeductionCandidates(Long tenantId, String userid, Long itemId) {
         // 单次查询拉所有候选桶
         // 1) 通过 EXISTS 子查询过滤出 ACTIVE 订阅对应的桶 (半连接短路, 比 IN 更易被 PG 优化)
         // 2) 过滤未过期桶 (NULL 或 expires_at > now)
@@ -853,17 +853,17 @@ public class DefaultBenefitRuntimeService implements BenefitRuntimeService {
         //    数字越大越优先扣减 (沿用 ubma_benefit_set.priority 注释约定)
         OffsetDateTime now = OffsetDateTime.now();
         LambdaQueryWrapper<UbmaSubscribeItem> q = new LambdaQueryWrapper<>();
-        q.eq(UbmaSubscribeItem::getAppId, appId)
+        q.eq(UbmaSubscribeItem::getTenantId, tenantId)
                 .eq(UbmaSubscribeItem::getItemId, itemId)
-                .apply("EXISTS (SELECT 1 FROM ubma_subscribe s WHERE s.id = ubma_subscribe_item.subscribe_id AND s.app_id = {0} AND s.userid = {1} AND s.status = 'ACTIVE' AND s.is_deleted = 0)",
-                        appId, userid)
+                .apply("EXISTS (SELECT 1 FROM ubma_subscribe s WHERE s.id = ubma_subscribe_item.subscribe_id AND s.tenant_id = {0} AND s.userid = {1} AND s.status = 'ACTIVE' AND s.is_deleted = 0)",
+                        tenantId, userid)
                 .and(w -> w.isNull(UbmaSubscribeItem::getExpiresAt)
                         .or().gt(UbmaSubscribeItem::getExpiresAt, now))
                 .orderByDesc(UbmaSubscribeItem::getBucketPriority)
                 .orderByAsc(UbmaSubscribeItem::getExpiresAt)
                 .orderByAsc(UbmaSubscribeItem::getCreatedAt);
         List<UbmaSubscribeItem> candidates = subscribeItemMapper.selectList(q);
-        // 兜底: 应用层 NULLS LAST 修正 + 优先级一致性 (DB 默认 NULLS FIRST for ASC, 桶优先级为 NULL 时不参与排序即可)
+        // 兜底: 应用层(NULLS LAST) 修正 + 优先级一致性 (DB 默认 NULLS FIRST for ASC, 桶优先级为 NULL 时不参与排序即可)
         // 包成 mutable list: 测试桩可能返回 List.of()/Collections.emptyList() 这类不可变列表, 直接 sort 会 UOE
         List<UbmaSubscribeItem> mutable = new ArrayList<>(candidates);
         mutable.sort(Comparator

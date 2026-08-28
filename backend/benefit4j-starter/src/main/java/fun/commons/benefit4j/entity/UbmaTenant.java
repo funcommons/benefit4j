@@ -15,12 +15,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * 系统应用/租户配置表。用于实现基于 AppId 的多业务数据物理/逻辑隔离。
+ * 租户配置表。用于实现基于 TenantId 的多业务数据物理/逻辑隔离。
  */
 @Getter
 @Setter
-@TableName(value = "ubma_application", autoResultMap = true)
-public class UbmaApplication {
+@TableName(value = "ubma_tenant", autoResultMap = true)
+public class UbmaTenant {
     /**
      * 主键ID
      */
@@ -38,15 +38,15 @@ public class UbmaApplication {
      */
     @TableField(typeHandler = LazyEncryptedFieldTypeHandler.class)
     @Sensitive(value = SensitiveRule.CUSTOM, pattern = "2,4,0")
-    private String appSecret;
+    private String tenantSecret;
 
     /**
-     * 应用名称
+     * 租户名称
      */
     private String name;
 
     /**
-     * 应用描述 (用途 / 业务范围)
+     * 租户描述 (用途 / 业务范围)
      */
     private String description;
 
