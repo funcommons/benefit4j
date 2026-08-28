@@ -10,7 +10,7 @@ export interface BenefitSetItemRef {
 
 export interface BenefitSet {
   id?: string
-  app_id?: string
+  tenant_id?: string
   name?: string
   duration?: number
   duration_unit?: string
@@ -46,7 +46,7 @@ export const deleteBenefitSet = (id: string) => {
 
 // Platform — 跨租户权益包聚合列表 (与 tenant 共用 Sets.vue), 多条件分页只读
 export interface PlatformBenefitSetQuery {
-  app_id?: string
+  tenant_id?: string
   status?: string
   keyword?: string
   priority_min?: number
@@ -58,7 +58,7 @@ export interface PlatformBenefitSetQuery {
 }
 
 export interface PlatformBenefitSet extends BenefitSet {
-  app_id: string
+  tenant_id: string
   tenant_name?: string
   subscribe_count?: number
 }

@@ -53,7 +53,7 @@
           </el-table-column>
           <el-table-column :label="t('benefit.tenant-appid')" width="160">
             <template #default="{ row }">
-              <code class="cell-id" @click="onCopy(row.app_id)">{{ row.app_id }}</code>
+              <code class="cell-id" @click="onCopy(row.tenant_id)">{{ row.tenant_id }}</code>
             </template>
           </el-table-column>
           <el-table-column :label="t('benefit.tenant')" min-width="140">
@@ -145,7 +145,7 @@ const fetchItems = async () => {
   loading.value = true
   try {
     const res = await getPlatformItems({
-      app_id: filterAppId.value,
+      tenant_id: filterAppId.value,
       status: filterStatus.value,
       keyword: searchQuery.value.trim() || undefined,
       page: pagination.page,
@@ -175,7 +175,7 @@ const formatUpdated = (raw?: string) => {
 
 const tenantOptions = computed(() => {
   const map = new Map<string, string>()
-  rows.value.forEach(i => i.app_id && map.set(i.app_id, i.tenant_name || i.app_id))
+  rows.value.forEach(i => i.tenant_id && map.set(i.tenant_id, i.tenant_name || i.tenant_id))
   return Array.from(map, ([value, label]) => ({ label, value }))
 })
 

@@ -75,7 +75,7 @@
         <div class="cred-list">
           <div class="cred-row">
             <span class="cred-label">{{ t('benefit.app-id') }}</span>
-            <code class="cred-value">{{ appId }}</code>
+            <code class="cred-value">{{ tenantId }}</code>
             <FcTooltip :content="t('benefit.copy-id')">
               <button class="action-icon-btn" @click="onCopyAppId">
                 <i class="ri-file-copy-line" />
@@ -151,7 +151,7 @@ const templateCount = ref(0)
 const subCount = ref(0)
 const recentSubs = ref<Subscription[]>([])
 
-const appId = computed(() => localStorage.getItem('benefit4j:app_id') || '-')
+const tenantId = computed(() => localStorage.getItem('benefit4j:tenant_id') || '-')
 const tokenPreview = computed(() => {
   const token = localStorage.getItem('benefit4j:access_token')
   if (!token) return '—'
@@ -190,7 +190,7 @@ const formatDate = (raw: string | undefined) => {
 }
 
 const onCopyAppId = async () => {
-  const ok = await copySilent(appId.value)
+  const ok = await copySilent(tenantId.value)
   if (ok) toast.success(t('benefit.copied'))
 }
 

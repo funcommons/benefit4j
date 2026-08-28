@@ -35,7 +35,7 @@ const onAuthExpired = (code: number) => {
   // 清本地登录态 (拦截器已在发起方清理过, 这里只处理被广播唤醒的标签页)
   localStorage.removeItem('benefit4j:access_token')
   localStorage.removeItem('benefit4j:expires_at')
-  localStorage.removeItem('benefit4j:app_id')
+  localStorage.removeItem('benefit4j:tenant_id')
 
   if (code === 10205) {
     ElMessage.warning('账号已在别处登录, 请重新登录')
@@ -64,7 +64,7 @@ const navItems = useSidebarNavItems({
   },
   topLevels: isPlatform.value
     ? [
-        { routeNames: ['BenefitPlatformDashboard', 'BenefitApps', 'BenefitPlatformItems', 'BenefitPlatformSets'] },
+        { routeNames: ['BenefitPlatformDashboard', 'BenefitTenants', 'BenefitPlatformItems', 'BenefitPlatformSets'] },
       ]
     : [
         { routeNames: ['BenefitTenantDashboard', 'BenefitItems', 'BenefitSets', 'BenefitTenantTemplates', 'BenefitSubscriptions', 'BenefitConsumptions'] },

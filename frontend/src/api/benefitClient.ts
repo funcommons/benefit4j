@@ -51,7 +51,7 @@ benefitClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const url = config.url || ''
   if (isRuntimeUrl(url)) {
     const secret = localStorage.getItem('benefit4j:app_secret')
-    const accessKey = localStorage.getItem('benefit4j:app_id')
+    const accessKey = localStorage.getItem('benefit4j:tenant_id')
     if (secret && accessKey) {
       const sig = buildSignatureHeaders(config.method || 'get', url, secret, accessKey, config.data)
       config.headers.set('X-Access-Key', sig['X-Access-Key'])
@@ -107,8 +107,8 @@ function handleAuthFailure(code: number): void {
   // 清登录态
   localStorage.removeItem('benefit4j:access_token')
   localStorage.removeItem('benefit4j:expires_at')
-  const appId = localStorage.getItem('benefit4j:app_id')
-  localStorage.removeItem('benefit4j:app_id')
+  const tenantId = localStorage.getItem('benefit4j:tenant_id')
+  localStorage.removeItem('benefit4j:tenant_id')
 
   // 被踢/注销: 弹窗友好提示; 过期: 静默踢 (业务上用户操作时触发, 提示反而打断)
   if (code === BIZ_TOKEN_KICKED) {
@@ -118,6 +118,6 @@ function handleAuthFailure(code: number): void {
     console.warn('[benefitClient] token revoked (10208)')
   }
 
-  const loginPath = appId === 'PLATFORM' ? '/benefit/app/platform/login' : '/benefit/app/tenant/login'
+  const loginPath = tenantId === 'PLATFORM' ? '/benefit/app/platform/login' : '/benefit/app/tenant/login'
   window.location.href = loginPath
 }

@@ -3,7 +3,7 @@ import type { ApiResponse } from './benefitClient'
 
 export interface ConsumeRecord {
   consume_id?: string
-  app_id?: string
+  tenant_id?: string
   userid?: string
   subs_item_id?: string
   item_id?: string
@@ -31,7 +31,7 @@ export interface ConsumeQuery {
   consume_time_end?: string
   page?: number
   size?: number
-  app_id?: number | string
+  tenant_id?: number | string
 }
 
 // 直接扣减请求 (V1.2.0 多源桶 + partialAllowed)
@@ -59,7 +59,7 @@ export const listConsumes = (params?: ConsumeQuery) => {
   )
 }
 
-// Platform — 跨租户扣减记录 (app_id 可选)
+// Platform — 跨租户扣减记录 (tenant_id 可选)
 export const platformListConsumes = (params?: ConsumeQuery) => {
   return benefitClient.get<any, ApiResponse<{ list: ConsumeRecord[]; total: number; page: number; size: number }>>(
     'benefit/api/v1/platform/consumes',
@@ -74,11 +74,11 @@ export const refundConsume = (consumeId: string, data: { reason?: string; operat
   )
 }
 
-export const platformRefundConsume = (consumeId: string, data: { reason?: string; operator?: string }, appId?: number | string) => {
+export const platformRefundConsume = (consumeId: string, data: { reason?: string; operator?: string }, tenantId?: number | string) => {
   return benefitClient.post<any, ApiResponse<void>>(
     `benefit/api/v1/platform/consumes/${consumeId}/refund`,
     data,
-    { params: appId !== undefined ? { app_id: appId } : undefined },
+    { params: tenantId !== undefined ? { tenant_id: tenantId } : undefined },
   )
 }
 
@@ -90,10 +90,10 @@ export const postConsumeDirect = (data: PostConsumeDirectRequest) => {
   )
 }
 
-export const platformPostConsumeDirect = (data: PostConsumeDirectRequest, appId?: number | string) => {
+export const platformPostConsumeDirect = (data: PostConsumeDirectRequest, tenantId?: number | string) => {
   return benefitClient.post<any, ApiResponse<ConsumeDirectResponse>>(
     'benefit/api/v1/platform/consumes/direct',
     data,
-    { params: appId !== undefined ? { app_id: appId } : undefined },
+    { params: tenantId !== undefined ? { tenant_id: tenantId } : undefined },
   )
 }

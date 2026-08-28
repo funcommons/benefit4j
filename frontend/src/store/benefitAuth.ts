@@ -4,7 +4,7 @@ import { login as loginApi } from '@/api/benefitAuth'
 
 export const useBenefitAuthStore = defineStore('benefitAuth', () => {
   const token = ref<string | null>(localStorage.getItem('benefit4j:access_token'))
-  const appId = ref<string | null>(localStorage.getItem('benefit4j:app_id'))
+  const tenantId = ref<string | null>(localStorage.getItem('benefit4j:tenant_id'))
   const appSecret = ref<string | null>(localStorage.getItem('benefit4j:app_secret'))
   const expiresAt = ref<number | null>(
     localStorage.getItem('benefit4j:expires_at')
@@ -42,8 +42,8 @@ export const useBenefitAuthStore = defineStore('benefitAuth', () => {
   }
 
   function setAppId(id: string) {
-    appId.value = id
-    localStorage.setItem('benefit4j:app_id', id)
+    tenantId.value = id
+    localStorage.setItem('benefit4j:tenant_id', id)
   }
 
   async function login(clientId: string, clientSecret: string) {
@@ -57,18 +57,18 @@ export const useBenefitAuthStore = defineStore('benefitAuth', () => {
 
   function logout() {
     token.value = null
-    appId.value = null
+    tenantId.value = null
     appSecret.value = null
     expiresAt.value = null
     localStorage.removeItem('benefit4j:access_token')
-    localStorage.removeItem('benefit4j:app_id')
+    localStorage.removeItem('benefit4j:tenant_id')
     localStorage.removeItem('benefit4j:app_secret')
     localStorage.removeItem('benefit4j:expires_at')
   }
 
   return {
     token,
-    appId,
+    tenantId,
     appSecret,
     isLoggedIn,
     isExpiringSoon,

@@ -168,9 +168,9 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'router.benefit-platform-dashboard', icon: 'Odometer' }
       },
       {
-        path: 'apps',
-        name: 'BenefitApps',
-        component: () => import('@/views/benefit/Apps.vue'),
+        path: 'tenants',
+        name: 'BenefitTenants',
+        component: () => import('@/views/benefit/Tenants.vue'),
         meta: { title: 'router.benefit-apps', icon: 'Setting' }
       },
       {
@@ -318,9 +318,9 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'router.benefit-platform-dashboard', icon: 'Odometer', hideInMenu: true }
       },
       {
-        path: 'apps',
-        name: 'BenefitPageApps',
-        component: () => import('@/views/benefit/Apps.vue'),
+        path: 'tenants',
+        name: 'BenefitPageTenants',
+        component: () => import('@/views/benefit/Tenants.vue'),
         meta: { title: 'router.benefit-apps', icon: 'Setting', hideInMenu: true }
       },
       {

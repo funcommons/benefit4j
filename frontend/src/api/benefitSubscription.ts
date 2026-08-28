@@ -18,7 +18,7 @@ export interface SubscriptionBucket {
 
 export interface Subscription {
   id?: string
-  app_id?: string
+  tenant_id?: string
   app_name?: string
   userid?: string
   set_id?: string
@@ -46,7 +46,7 @@ export interface SubscriptionQuery {
   created_at_end?: string
   page?: number
   size?: number
-  app_id?: number | string
+  tenant_id?: number | string
 }
 
 // Tenant — 当前租户名下订阅列表
@@ -57,7 +57,7 @@ export const listSubscriptions = (params?: SubscriptionQuery) => {
   )
 }
 
-// Platform — 跨租户订阅列表 (app_id 可选)
+// Platform — 跨租户订阅列表 (tenant_id 可选)
 export const platformListSubscriptions = (params?: SubscriptionQuery) => {
   return benefitClient.get<any, ApiResponse<{ list: Subscription[]; total: number; page: number; size: number }>>(
     'benefit/api/v1/platform/subscriptions',
@@ -73,7 +73,7 @@ export const listSubscriptionItems = (subscribeId: string, params?: { item_id?: 
   )
 }
 
-export const platformListSubscriptionItems = (subscribeId: string, params?: { item_id?: string; app_id?: number | string }) => {
+export const platformListSubscriptionItems = (subscribeId: string, params?: { item_id?: string; tenant_id?: number | string }) => {
   return benefitClient.get<any, ApiResponse<{ list: SubscriptionBucket[] }>>(
     `benefit/api/v1/platform/subscriptions/${subscribeId}/items`,
     { params },

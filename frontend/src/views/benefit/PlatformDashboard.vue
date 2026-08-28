@@ -103,7 +103,7 @@
             <el-table-column :label="t('benefit.tenant')" width="160">
               <template #default="{ row }">
                 <FcTag color="gray" size="sm">
-                  {{ row.tenant_name || row.app_id }}
+                  {{ row.tenant_name || row.tenant_id }}
                 </FcTag>
               </template>
             </el-table-column>
@@ -153,9 +153,9 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { benefitClient } from '@/api/benefitClient'
-import { getApps } from '@/api/benefitApp'
+import { getApps } from '@/api/benefitTenant'
 import type { ApiResponse } from '@/api/benefitClient'
-import type { AppEntity } from '@/api/benefitApp'
+import type { AppEntity } from '@/api/benefitTenant'
 import { getPlatformItems } from '@/api/benefitPlatformItem'
 import type { PlatformItem } from '@/api/benefitPlatformItem'
 import {

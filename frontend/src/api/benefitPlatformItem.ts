@@ -3,7 +3,7 @@ import type { ApiResponse } from './benefitClient'
 
 export interface PlatformItem {
   id: string
-  app_id: string
+  tenant_id: string
   tenant_name?: string
   name: string
   icon: string
@@ -25,7 +25,7 @@ export interface PlatformItemPage<T> {
 }
 
 export interface PlatformItemQuery {
-  app_id?: string
+  tenant_id?: string
   status?: string
   keyword?: string
   created_at_start?: string

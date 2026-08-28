@@ -37,7 +37,7 @@
         <el-form-item v-if="isPlatform" class="fc-form-item" :label="t('benefit.tenant')">
           <el-input
             class="fc-input"
-            v-model="appIdInput"
+            v-model="tenantIdInput"
             :placeholder="t('benefit.tenant-appid-placeholder')"
             clearable
             style="width: 180px"
@@ -151,7 +151,7 @@
           </el-table-column>
           <el-table-column v-if="isPlatform" :label="t('benefit.tenant-appid')" min-width="140">
             <template #default="{ row }">
-              <code class="cell-id">{{ row.app_id }}</code>
+              <code class="cell-id">{{ row.tenant_id }}</code>
               <span class="muted"> {{ row.app_name }}</span>
             </template>
           </el-table-column>
@@ -245,7 +245,7 @@ const filters = reactive(initialFilters())
 const dateBeginRange = ref<[string, string] | null>(null)
 const createdAtRange = ref<[string, string] | null>(null)
 
-const appIdInput = ref('')
+const tenantIdInput = ref('')
 
 const pagination = reactive({ page: 1, size: 20 })
 
@@ -288,8 +288,8 @@ const buildParams = () => {
     p.created_at_start = createdAtRange.value[0]
     p.created_at_end = createdAtRange.value[1]
   }
-  if (isPlatform.value && appIdInput.value) {
-    p.app_id = appIdInput.value
+  if (isPlatform.value && tenantIdInput.value) {
+    p.tenant_id = tenantIdInput.value
   }
   return p
 }
@@ -315,7 +315,7 @@ const onReset = () => {
   Object.assign(filters, initialFilters())
   dateBeginRange.value = null
   createdAtRange.value = null
-  appIdInput.value = ''
+  tenantIdInput.value = ''
   pagination.page = 1
   onSearch()
 }
@@ -325,7 +325,7 @@ const loadBuckets = async (subscribeId: string) => {
   try {
     const api = isPlatform.value ? platformListSubscriptionItems : listSubscriptionItems
     const params: any = {}
-    if (isPlatform.value && appIdInput.value) params.app_id = appIdInput.value
+    if (isPlatform.value && tenantIdInput.value) params.tenant_id = tenantIdInput.value
     const res = await api(subscribeId, params) as any
     bucketMap[subscribeId] = (res.data?.list as SubscriptionBucket[]) || []
   } catch (err: any) {

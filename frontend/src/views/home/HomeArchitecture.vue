@@ -68,7 +68,7 @@ const toTagColor = (tone: string): TagColor => (tone === 'info' ? 'gray' : tone)
 
 const layers = [
   { id: 'access', tone: 'primary' as const, items: ['iframe 嵌入', 'REST API', 'Web SDK', 'postMessage'] },
-  { id: 'biz',    tone: 'success' as const, items: ['应用', '权益项', '权益包', '订阅', '扣减', '退减', '补偿', '迁移'] },
+  { id: 'biz',    tone: 'success' as const, items: ['租户', '权益项', '权益包', '订阅', '扣减', '退减', '补偿', '迁移'] },
   { id: 'data',   tone: 'warning' as const, items: ['ubma_*', 'ubmp_*', 'ubme_*', '审计日志', 'JSONB / GIN'] },
   { id: 'infra',  tone: 'info' as const,    items: ['Snowflake', 'OpenID', '多级缓存', 'Lua 限流', 'AES 加密', 'HMAC 签名'] },
 ]

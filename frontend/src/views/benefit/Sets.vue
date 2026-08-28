@@ -70,7 +70,7 @@
           </el-table-column>
           <el-table-column v-if="isPlatform" :label="t('benefit.tenant-appid')" width="160">
             <template #default="{ row }">
-              <code class="cell-id">{{ row.app_id }}</code>
+              <code class="cell-id">{{ row.tenant_id }}</code>
             </template>
           </el-table-column>
           <el-table-column v-if="isPlatform" :label="t('benefit.tenant')" min-width="140">
@@ -211,7 +211,7 @@ const statusOptions = computed(() => [
 const tenantOptions = computed(() => {
   const map = new Map<string, string>()
   ;(sets.value as PlatformBenefitSet[]).forEach(s => {
-    if (s.app_id) map.set(s.app_id, s.tenant_name || s.app_id)
+    if (s.tenant_id) map.set(s.tenant_id, s.tenant_name || s.tenant_id)
   })
   return Array.from(map, ([value, label]) => ({ label, value }))
 })
@@ -360,7 +360,7 @@ const onSearch = async () => {
   try {
     if (isPlatform.value) {
       const res = await getPlatformBenefitSets({
-        app_id: filterAppId.value,
+        tenant_id: filterAppId.value,
         status: filterStatus.value || undefined,
         keyword: searchQuery.value.trim() || undefined,
         page: pagination.page,
@@ -392,7 +392,7 @@ const onReset = () => {
 
 onMounted(() => { onSearch() })
 
-// 平台模式下 app_id/status/keyword 变更自动触发查询
+// 平台模式下 tenant_id/status/keyword 变更自动触发查询
 if (isPlatform.value) {
   watch([filterAppId, filterStatus, searchQuery], () => {
     pagination.page = 1

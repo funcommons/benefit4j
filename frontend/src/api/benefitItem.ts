@@ -3,7 +3,7 @@ import type { ApiResponse } from './benefitClient'
 
 export interface BenefitItem {
   id?: string
-  app_id?: string
+  tenant_id?: string
   name?: string
   icon?: string
   description?: string

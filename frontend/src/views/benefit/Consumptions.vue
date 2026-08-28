@@ -20,7 +20,7 @@
           <el-input class="fc-input" v-model="filters.external_order_id" :placeholder="t('benefit.order-id')" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item v-if="isPlatform" class="fc-form-item" :label="t('benefit.tenant')">
-          <el-input class="fc-input" v-model="appIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
+          <el-input class="fc-input" v-model="tenantIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item class="fc-form-item" :label="t('benefit.keyword')">
           <el-input class="fc-input" v-model="filters.keyword" :placeholder="t('benefit.keyword-placeholder')" clearable style="width: 180px" />
@@ -70,7 +70,7 @@
           </el-table-column>
           <el-table-column v-if="isPlatform" :label="t('benefit.tenant-appid')" min-width="140">
             <template #default="{ row }">
-              <code class="cell-id">{{ row.app_id }}</code>
+              <code class="cell-id">{{ row.tenant_id }}</code>
             </template>
           </el-table-column>
           <el-table-column :label="t('benefit.user-id')" min-width="140">
@@ -217,7 +217,7 @@ const initialFilters = () => ({
 const filters = reactive(initialFilters())
 
 const consumeTimeRange = ref<[string, string] | null>(null)
-const appIdInput = ref('')
+const tenantIdInput = ref('')
 const pagination = reactive({ page: 1, size: 20 })
 
 const statusOptions = computed(() => [
@@ -260,8 +260,8 @@ const buildParams = () => {
     p.consume_time_start = consumeTimeRange.value[0]
     p.consume_time_end = consumeTimeRange.value[1]
   }
-  if (isPlatform.value && appIdInput.value) {
-    p.app_id = appIdInput.value
+  if (isPlatform.value && tenantIdInput.value) {
+    p.tenant_id = tenantIdInput.value
   }
   return p
 }
@@ -286,7 +286,7 @@ const onSearch = async () => {
 const onReset = () => {
   Object.assign(filters, initialFilters())
   consumeTimeRange.value = null
-  appIdInput.value = ''
+  tenantIdInput.value = ''
   pagination.page = 1
   onSearch()
 }
@@ -316,7 +316,7 @@ const onRefund = async () => {
       await platformRefundConsume(
         refundTarget.value.consume_id,
         payload,
-        appIdInput.value || undefined,
+        tenantIdInput.value || undefined,
       )
     } else {
       await refundConsume(refundTarget.value.consume_id, payload)

@@ -5,7 +5,7 @@
     <FcFilterBar>
       <el-form :inline="true" class="filter-form" @submit.prevent>
         <el-form-item v-if="isPlatform" class="fc-form-item" :label="t('benefit.tenant')">
-          <el-input class="fc-input" v-model="appIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
+          <el-input class="fc-input" v-model="tenantIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item class="fc-form-item">
           <FcButton type="primary" @click="openDialog()">
@@ -132,7 +132,7 @@ const isPlatform = computed(() => route.path.startsWith('/benefit/platform/app')
 const dialogVisible = ref(false)
 const resultVisible = ref(false)
 const submitting = ref(false)
-const appIdInput = ref('')
+const tenantIdInput = ref('')
 const lastResult = ref<CompensationResponse | null>(null)
 const formRef = ref()
 
@@ -198,7 +198,7 @@ const onSubmit = async () => {
       if (form.priority !== null && form.priority !== undefined) payload.priority = form.priority
       if (form.expires_at) payload.expires_at = form.expires_at
     }
-    const res = await api(payload, isPlatform.value ? appIdInput.value : undefined) as any
+    const res = await api(payload, isPlatform.value ? tenantIdInput.value : undefined) as any
     lastResult.value = (res.data as CompensationResponse) || null
     dialogVisible.value = false
     resultVisible.value = true

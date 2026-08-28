@@ -39,11 +39,11 @@ export const postCompensation = (data: PostCompensationRequest) => {
   )
 }
 
-// Platform (app_id 在 query)
-export const platformPostCompensation = (data: PostCompensationRequest, appId?: number | string) => {
+// Platform (tenant_id 在 query)
+export const platformPostCompensation = (data: PostCompensationRequest, tenantId?: number | string) => {
   return benefitClient.post<any, ApiResponse<CompensationResponse>>(
     'benefit/api/v1/platform/compensations',
     data,
-    { params: appId !== undefined ? { app_id: appId } : undefined },
+    { params: tenantId !== undefined ? { tenant_id: tenantId } : undefined },
   )
 }

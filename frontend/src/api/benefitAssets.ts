@@ -25,7 +25,7 @@ export interface AssetDefinition {
 /** 资产账户 */
 export interface AssetAccount {
   id?: string
-  app_id?: string
+  tenant_id?: string
   owner_type?: string
   owner_id?: string
   asset_code?: string
@@ -76,12 +76,12 @@ export const resumeAsset = (code: string) => {
   return benefitClient.post<any, ApiResponse<void>>(`benefit/api/v1/platform/assets/${code}/resume`)
 }
 
-// ---------- 账户 / 流水(平台运营视角,跨 app;app_id 可选收窄) ----------
+// ---------- 账户 / 流水(平台运营视角,跨 app;tenant_id 可选收窄) ----------
 
-export const getAssetAccounts = (params: { owner_type: string; owner_id: string; asset_code?: string; app_id?: string }) => {
+export const getAssetAccounts = (params: { owner_type: string; owner_id: string; asset_code?: string; tenant_id?: string }) => {
   return benefitClient.get<any, ApiResponse<AssetAccount[]>>('benefit/api/v1/platform/assets/accounts', { params })
 }
 
-export const getAssetPostings = (params: { account_ref: string; asset_code: string; app_id?: string; page?: number; size?: number }) => {
+export const getAssetPostings = (params: { account_ref: string; asset_code: string; tenant_id?: string; page?: number; size?: number }) => {
   return benefitClient.get<any, ApiResponse<AssetPosting[]>>('benefit/api/v1/platform/assets/postings', { params })
 }

@@ -8,7 +8,7 @@ import CryptoJS from 'crypto-js'
  *   signature    = Base64( HmacSHA256(secret, stringToSign) )     (标准 base64, 保留 padding)
  *   bodyMd5      = MD5(原始 body 字节) 的 32 字符小写 hex (空 body = md5("") = d41d8cd9...)
  *
- * Header: X-Access-Key(app_id) / X-Timestamp(ms) / X-Nonce(uuid) / X-Signature
+ * Header: X-Access-Key(tenant_id) / X-Timestamp(ms) / X-Nonce(uuid) / X-Signature
  * 时间窗 ±5min, nonce 10min 一次性 (Redis SETNX), 故每次请求 nonce 必须唯一.
  *
  * PATH 不含 query string (后端取 request.getRequestURI()).

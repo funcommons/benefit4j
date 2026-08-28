@@ -5,7 +5,7 @@
     <FcFilterBar>
       <el-form :inline="true" class="filter-form" @submit.prevent>
         <el-form-item v-if="isPlatform" class="fc-form-item" :label="t('benefit.tenant')">
-          <el-input class="fc-input" v-model="appIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
+          <el-input class="fc-input" v-model="tenantIdInput" :placeholder="t('benefit.tenant-appid-placeholder')" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item class="fc-form-item">
           <FcButton type="primary" @click="openDialog()">
@@ -133,7 +133,7 @@ const dialogVisible = ref(false)
 const resultVisible = ref(false)
 const failVisible = ref(false)
 const submitting = ref(false)
-const appIdInput = ref('')
+const tenantIdInput = ref('')
 const lastResult = ref<ConsumeDirectResponse | null>(null)
 const lastError = ref('')
 const formRef = ref()
@@ -170,7 +170,7 @@ const onSubmit = async () => {
   submitting.value = true
   try {
     const api = isPlatform.value ? platformPostConsumeDirect : postConsumeDirect
-    const res = await api(form, isPlatform.value ? appIdInput.value : undefined) as any
+    const res = await api(form, isPlatform.value ? tenantIdInput.value : undefined) as any
     lastResult.value = (res.data as ConsumeDirectResponse) || null
     dialogVisible.value = false
     resultVisible.value = true
