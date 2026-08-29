@@ -17,6 +17,14 @@
             <artifactId>benefit4j-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!-- tenant-tck: 租户合规断言(中间件中台租户设计 §10 机器版) -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-tenant-tck</artifactId>
+            <version>${framework4j.version}</version>
+            <scope>test</scope>
+        </dependency>
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
