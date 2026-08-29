@@ -23,6 +23,7 @@ final class AssetsMigrations {
             "V1.3.6__init_reconcile.sql",
             "V1.4.0__rename_app_to_tenant.sql",
             "V1.4.1__tenant_security_hardening.sql",
+            "V1.4.2__tenant_contract_columns.sql",
     };
 
     private AssetsMigrations() {
@@ -37,18 +38,35 @@ final class AssetsMigrations {
 
     static void applyAll() throws Exception {
         try (Connection conn = open()) {
-            if (atV141(conn)) return;              // V1.4.1 已生效(policy 就位)→ 全部就绪
-            if (atV140(conn)) {                    // 列已 tenant_id 但缺 V1.4.1 → 只补最新一档
-                try (var stmt = conn.createStatement()) {
-                    stmt.execute(loadDdl("V1.4.1__tenant_security_hardening.sql"));
-                }
+            if (atV142(conn)) return;              // V1.4.2 已生效(契约列就位)→ 全部就绪
+            if (atV141(conn)) {                    // RLS 就位但缺契约列 → 只补 V1.4.2
+                apply(conn, "V1.4.2__tenant_contract_columns.sql");
+                return;
+            }
+            if (atV140(conn)) {                    // 列已 tenant_id 但缺 V1.4.1 → 补 V1.4.1 + V1.4.2
+                apply(conn, "V1.4.1__tenant_security_hardening.sql");
+                apply(conn, "V1.4.2__tenant_contract_columns.sql");
                 return;
             }
             for (String file : FILES) {            // 空库/纯旧库(app_id)走全序列
-                try (var stmt = conn.createStatement()) {
-                    stmt.execute(loadDdl(file));
-                }
+                apply(conn, file);
             }
+        }
+    }
+
+    private static void apply(Connection conn, String file) throws Exception {
+        try (var stmt = conn.createStatement()) {
+            stmt.execute(loadDdl(file));
+        }
+    }
+
+    /** V1.4.2 标志: ubma_tenant 契约列 privileges 存在(framework4j-tenant 接入) */
+    private static boolean atV142(Connection conn) throws Exception {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(
+                     "SELECT 1 FROM information_schema.columns "
+                     + "WHERE table_name='ubma_tenant' AND column_name='privileges'")) {
+            return rs.next();
         }
     }
 

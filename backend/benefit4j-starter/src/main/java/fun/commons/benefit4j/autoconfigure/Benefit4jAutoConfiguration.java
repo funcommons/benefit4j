@@ -137,4 +137,11 @@ public class Benefit4jAutoConfiguration {
             org.springframework.beans.factory.ObjectProvider<fun.commons.framework4j.accesstoken.config.AccessTokenProperties> accessTokenPropertiesProvider) {
         return new fun.commons.benefit4j.tracelog.Benefit4jTraceLogAuthValidator(accessTokenPropertiesProvider);
     }
+
+    // ==== framework4j-tenant: 实体子类 SPI(契约层冻结字段,表名 = {table-prefix}tenant = ubma_tenant)====
+    @Bean
+    @ConditionalOnMissingBean
+    public fun.commons.framework4j.tenant.schema.TenantSchema tenantSchema() {
+        return () -> fun.commons.benefit4j.entity.UbmaTenant.class;
+    }
 }

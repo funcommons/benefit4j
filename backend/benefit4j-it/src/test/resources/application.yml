@@ -28,6 +28,20 @@ framework4j:
           pagination: true
           blockAttack: true
           dbType: POSTGRE_SQL
+  tenant:
+    enabled: true
+    table-prefix: ubma_
+    ddl-mode: PROVIDED
+    auth:
+      path: /benefit/api/v1/auth/token
+      token-type: APP
+      expire-seconds: 7200
+    platform:
+      client-id: PLATFORM
+      client-secret: platform-secret-it
+    secret:
+      grace-hours: 24
+
   access-token:
     enabled: true
     redis-name: default

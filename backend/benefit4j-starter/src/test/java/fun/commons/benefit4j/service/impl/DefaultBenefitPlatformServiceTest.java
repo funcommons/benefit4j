@@ -32,6 +32,9 @@ public class DefaultBenefitPlatformServiceTest {
     @Mock private UbmpBenefitTmplItemMapper benefitTmplItemMapper;
     @Mock private UbmaSubscribeMapper subscribeMapper;
     @Mock private UbmaSubscribeItemMapper subscribeItemMapper;
+    @Mock private UbmaConsumeMapper consumeMapper;
+    @Mock private fun.commons.framework4j.tenant.auth.TenantSecretService tenantSecretService;
+    @Mock private org.springframework.beans.factory.ObjectProvider<fun.commons.framework4j.tenant.auth.TenantSecretService> tenantSecretServiceProvider;
 
     @BeforeAll
     static void initMpCache() {
@@ -47,6 +50,7 @@ public class DefaultBenefitPlatformServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantSecretServiceProvider.getIfAvailable()).thenReturn(tenantSecretService);
     }
 
     // === Tenants ===
@@ -477,23 +481,19 @@ public class DefaultBenefitPlatformServiceTest {
 
     @Test
     void testPostTenantsTenantIdSecret_Success() {
-        UbmaTenant app = new UbmaTenant();
-        app.setId(1L);
-        app.setTenantSecret("old-secret");
-        when(applicationMapper.selectById(1L)).thenReturn(app);
-        when(applicationMapper.update(any(), any())).thenReturn(1);
+        // v1.5.0 起委托 framework4j-tenant TenantSecretService(reset 三步+宽限期,模块测试覆盖)
+        ApiResponse<java.util.Map<String, Object>> delegated = ApiResponse.success(
+                java.util.Map.of("id", IdObfuscator.toOpenId(1L), "tenant_secret", "new-secret"));
+        when(tenantSecretService.reset(1L)).thenReturn(delegated);
 
         ApiResponse<?> resp = (ApiResponse<?>) service.postTenantsTenantIdSecret(1L);
         assertThat(resp.isSuccess()).isTrue();
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> data = (java.util.Map<String, Object>) resp.getData();
-        assertThat(data.get("id")).isEqualTo(IdObfuscator.toOpenId(1L));
-        assertThat(data.get("tenant_secret").toString()).isNotEqualTo("old-secret");
+        verify(tenantSecretService).reset(1L);
     }
 
     @Test
     void testPostTenantsTenantIdSecret_NotFound() {
-        when(applicationMapper.selectById(anyLong())).thenReturn(null);
+        when(tenantSecretService.reset(999L)).thenReturn(ApiResponse.fail(404, "租户不存在或非 ACTIVE 状态"));
         ApiResponse<?> resp = (ApiResponse<?>) service.postTenantsTenantIdSecret(999L);
         assertThat(resp.isFail()).isTrue();
     }

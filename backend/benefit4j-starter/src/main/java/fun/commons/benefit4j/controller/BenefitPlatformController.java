@@ -10,15 +10,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequiresToken(value = "APP", type = "access")
+@fun.commons.framework4j.tenant.annotation.PlatformDomain
 public class BenefitPlatformController {
 
     private final BenefitPlatformClient client;
-
-    /** 平台域强校验(§5.3 方案 B): 仅平台身份(tenant_id==0)可达,租户 token 一律 403 */
-    @ModelAttribute
-    void requirePlatformIdentity() {
-        fun.commons.benefit4j.security.PlatformIdentityGuard.requirePlatform();
-    }
 
     @PostMapping("/benefit/api/v1/platform/tenants")
     public Object postTenants(

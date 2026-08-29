@@ -6,13 +6,11 @@ import fun.commons.benefit4j.dto.*;
 import fun.commons.benefit4j.entity.*;
 import fun.commons.benefit4j.mapper.*;
 import fun.commons.benefit4j.service.BenefitPlatformService;
-import fun.commons.framework4j.accesstoken.config.AccessTokenProperties;
 import fun.commons.framework4j.audit.annotation.Auditable;
+import fun.commons.framework4j.tenant.auth.TenantSecretService;
 import fun.commons.framework4j.id.util.IdObfuscator;
 import fun.commons.framework4j.web.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,11 +38,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
     private final UbmaSubscribeMapper subscribeMapper;
     private final UbmaSubscribeItemMapper subscribeItemMapper;
     private final UbmaConsumeMapper consumeMapper;
-    private final AccessTokenProperties accessTokenProperties;
-    private final StringRedisTemplate redisTemplate;
-
-    @Value("${spring.application.name:benefit4j-backend}")
-    private String appName;
+    private final org.springframework.beans.factory.ObjectProvider<TenantSecretService> tenantSecretService;
 
     @Override
     @Transactional
@@ -56,7 +50,7 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         app.setName(req.getName());
         app.setDescription(req.getDescription() != null ? req.getDescription() : "");
         app.setStatus("ACTIVE");
-        app.setExt(req.getExt());
+        app.setExt(req.getExt() instanceof Map ? castExt(req.getExt()) : null);
         app.setCreatedAt(now);
         app.setUpdatedAt(now);
         applicationMapper.insert(app);
@@ -125,63 +119,28 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         if (req.getName() != null) wrapper.set(UbmaTenant::getName, req.getName());
         if (req.getDescription() != null) wrapper.set(UbmaTenant::getDescription, req.getDescription());
         if (req.getStatus() != null) wrapper.set(UbmaTenant::getStatus, req.getStatus());
-        if (req.getExt() != null) wrapper.set(UbmaTenant::getExt, req.getExt());
+        if (req.getExt() != null) wrapper.set(UbmaTenant::getExt, castExt(req.getExt()));
         wrapper.set(UbmaTenant::getUpdatedAt, OffsetDateTime.now());
         applicationMapper.update(null, wrapper);
 
         return ApiResponse.success("ok");
     }
 
+    /**
+     * 密钥重置委托 framework4j-tenant 的 TenantSecretService(§5.5 三步:
+     * 旧钥入 prev 宽限期 → 新钥落库(TypeHandler 加密)→ 撤销该租户全部存量会话);
+     * 响应契约不变(id/name/tenant_secret,明文只显一次)。
+     * 注意:模块实现仅允许 ACTIVE 租户 reset(SUSPEND 请先恢复)。
+     */
     @Override
     @Transactional
     @Auditable(action = "APP_RESET_SECRET", targetType = "application", targetIdSpel = "#tenantId")
     public Object postTenantsTenantIdSecret(Long tenantId) {
-        UbmaTenant app = applicationMapper.selectById(tenantId);
-        if (app == null) {
-            return ApiResponse.fail(404, "租户不存在");
+        TenantSecretService service = tenantSecretService.getIfAvailable();
+        if (service == null) {
+            return ApiResponse.fail(503, "framework4j-tenant 未启用");
         }
-
-        String newSecret = UUID.randomUUID().toString().replace("-", "");
-        // 旧密钥进宽限期列(§5.5 双版本过渡,默认 24h 内两把皆可换 token)
-        app.setTenantSecretPrev(app.getTenantSecret());
-        app.setTenantSecretPrevAt(OffsetDateTime.now());
-        // 走 updateById 让 LazyEncryptedFieldTypeHandler (framework4j) 自动加密 tenant_secret;
-        // ext 字段标了 jdbcType=JdbcType.OTHER 修复 JSONB update cast, 全量 updateById 不再报
-        // "column ext is of type jsonb but expression is of type varchar"
-        app.setTenantSecret(newSecret);
-        app.setUpdatedAt(OffsetDateTime.now());
-        applicationMapper.updateById(app);
-
-        revokeTenantSessions(tenantId);   // §5.5: 重置即撤销该租户全部存量会话
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", IdObfuscator.toOpenId(app.getId()));
-        result.put("name", app.getName());
-        result.put("tenant_secret", newSecret);
-        return ApiResponse.success(result);
-    }
-
-    /**
-     * 按租户撤销全部存量会话(§5.5 密钥生命周期): framework4j 会话 key 为
-     * {appName}:accesstoken:{type}:{calculateKeyHash(tenant_id, hashSalt)},
-     * 删除 APP/OPS 两型的元数据 key 与限次计数 key —— 持有旧 token 的会话立即失效。
-     */
-    private void revokeTenantSessions(Long tenantId) {
-        try {
-            String hash = fun.commons.framework4j.accesstoken.util.TokenUtils.calculateKeyHash(
-                    String.valueOf(tenantId), accessTokenProperties.getHashSalt());
-            for (String type : List.of("APP", "OPS")) {
-                String key = fun.commons.framework4j.accesstoken.core.TokenKeyBuilder
-                        .accessMetadata(appName, type, hash);
-                redisTemplate.delete(key);
-                redisTemplate.delete(fun.commons.framework4j.accesstoken.core.TokenKeyBuilder
-                        .accessUsageStats(key));
-            }
-        } catch (Exception e) {
-            // 撤销失败不阻断 reset 主流程(新密钥已生效),但必须留痕排查
-            org.slf4j.LoggerFactory.getLogger(DefaultBenefitPlatformService.class)
-                    .error("[Security] reset-secret 后撤销租户会话失败: tenantId={}", tenantId, e);
-        }
+        return service.reset(tenantId);
     }
 
     @Override
@@ -507,6 +466,11 @@ public class DefaultBenefitPlatformService implements BenefitPlatformService {
         stats.put("total_frozen", totalFrozen);
         stats.put("total_liability", totalQuota - totalConsumed - totalFrozen);
         return ApiResponse.success(stats);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castExt(Object ext) {
+        return ext instanceof Map ? (Map<String, Object>) ext : null;
     }
 
     private Long safeParseId(String id) {

@@ -1,102 +1,15 @@
 package fun.commons.benefit4j.entity;
 
-import fun.commons.framework4j.openid.annotation.OpenId;
-import fun.commons.framework4j.sensitive.annotation.Sensitive;
-import fun.commons.framework4j.sensitive.annotation.SensitiveRule;
-import fun.commons.framework4j.sensitive.typehandler.LazyEncryptedFieldTypeHandler;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import org.apache.ibatis.type.JdbcType;
-import lombok.Getter;
-import lombok.Setter;
+import fun.commons.framework4j.tenant.entity.TenantEntity;
 
 /**
- * 租户配置表。用于实现基于 TenantId 的多业务数据物理/逻辑隔离。
+ * 租户配置表实体(实体子类 SPI,framework4j-tenant 接入)。
+ * <p>
+ * 字段全部继承 {@link TenantEntity}(契约层冻结:id=租户 id 雪花/四类配置 JSONB/
+ * 密钥 AES-GCM 双列宽限期/生命周期状态机);表名守项目简码规范 ubma_tenant。
+ * {@code autoResultMap = true} 必须 —— 密钥列 typeHandler select 解密依赖它。
  */
-@Getter
-@Setter
 @TableName(value = "ubma_tenant", autoResultMap = true)
-public class UbmaTenant {
-    /**
-     * 主键ID
-     */
-    @TableId(type = IdType.ASSIGN_ID)
-    @OpenId
-    private Long id;
-
-    /**
-     * 租户全局唯一标识
-     */
-
-    /**
-     * OAuth2 client_secret (HMAC-SHA256签名密钥)
-     * 写入 DB 自动 AES-256-GCM 加密, 读取自动解密; 响应序列化时脱敏 (保留前2后4)
-     */
-    @TableField(typeHandler = LazyEncryptedFieldTypeHandler.class)
-    @Sensitive(value = SensitiveRule.CUSTOM, pattern = "2,4,0")
-    private String tenantSecret;
-
-    /**
-     * 轮换宽限期内的旧密钥(§5.5 双版本过渡): reset 时旧 secret 挪入此列,
-     * 宽限期内两把皆可换 token; 过期后旧密钥自然失效(懒校验,无需清理任务)。
-     * 同款加密存储;永不对外返回。
-     */
-    @TableField(typeHandler = LazyEncryptedFieldTypeHandler.class)
-    private String tenantSecretPrev;
-
-    /** 旧密钥存入时间(宽限期起点) */
-    @TableField("tenant_secret_prev_at")
-    private java.time.OffsetDateTime tenantSecretPrevAt;
-
-    /**
-     * 租户名称
-     */
-    private String name;
-
-    /**
-     * 租户描述 (用途 / 业务范围)
-     */
-    private String description;
-
-    /**
-     * 状态 (ACTIVE:正常, INACTIVE:停用)
-     */
-    private String status;
-
-    /**
-     * 租户自定义透传动态属性 (底层必须建 GIN 索引)
-     */
-    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
-    private Object ext;
-
-    /**
-     * 创建时间
-     */
-    private java.time.OffsetDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
-    private java.time.OffsetDateTime updatedAt;
-
-    /**
-     * 创建人
-     */
-    private String createBy;
-
-    /**
-     * 更新人
-     */
-    private String updateBy;
-
-    /**
-     * 逻辑删除标志(0:未删, 1:已删)
-     */
-    @TableLogic
-    private Short isDeleted;
-
+public class UbmaTenant extends TenantEntity {
 }

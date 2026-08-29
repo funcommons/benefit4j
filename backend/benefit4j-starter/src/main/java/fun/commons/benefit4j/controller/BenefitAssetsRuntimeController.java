@@ -38,13 +38,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequiresToken(value = "APP", type = "access")
 @RequiresSignature
+@fun.commons.framework4j.tenant.annotation.TenantDomain
 public class BenefitAssetsRuntimeController {
 
-    /** 租户域强校验(§5.3/§6.2 L1): 真实租户身份(tenant_id>0)才可操作/记账;平台身份(0)拒绝 */
-    @org.springframework.web.bind.annotation.ModelAttribute
-    void requireTenantIdentity() {
-        fun.commons.benefit4j.security.TenantIdentityGuard.requireTenant();
-    }
 
 
     private final PostingService postingService;

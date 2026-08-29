@@ -1,9 +1,9 @@
 package fun.commons.benefit4j.it;
 
 import fun.commons.benefit4j.entity.UbmaTenant;
-import fun.commons.benefit4j.service.BenefitAuthService;
 import fun.commons.benefit4j.service.BenefitPlatformService;
 import fun.commons.framework4j.accesstoken.core.AccessTokenGenerator;
+import fun.commons.framework4j.tenant.auth.TenantAuthTemplate;
 import fun.commons.framework4j.web.ApiResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 租户安全三件套(中间件中台租户设计 §5.3/§5.5/§8 落地):
  *   ① 换 token 防爆破 —— 连续失败 5 次锁 15min,正确凭据也被拒;窗口 key 过期/清除后恢复
  *   ② reset-secret 撤销存量会话 —— 重置后该租户 APP/OPS 会话 key 立即消失
- *   ③ 平台域守卫逻辑由 starter 单测覆盖(PlatformIdentityGuardTest),真实进程链由 smoke 覆盖
+ *   ③ 宽限期双版本(§5.5)—— 旧密钥 24h 内可换 token,过期后 401
+ *
+ * v1.5.0 起认证/密钥生命周期由 framework4j-tenant 提供(TenantAuthTemplate / TenantSecretService),
+ * 双面守卫由模块 DomainGuardInterceptor 承担(冒烟 AssetsSmokeIT 覆盖真实进程 403 链)。
  */
 @SpringBootTest(classes = Benefit4jIntegrationTest.TestApplication.class)
 public class TenantSecurityIT extends BaseMapperTest {
@@ -30,7 +33,7 @@ public class TenantSecurityIT extends BaseMapperTest {
     }
 
     @Autowired
-    private BenefitAuthService authService;
+    private TenantAuthTemplate authTemplate;
 
     @Autowired
     private BenefitPlatformService platformService;
@@ -40,6 +43,11 @@ public class TenantSecurityIT extends BaseMapperTest {
 
     @Autowired
     private StringRedisTemplate redis;
+
+    /** framework4j-tenant 防爆破计数 key: {appName}:tenant:auth:fail:{clientId} */
+    private static String failKey(Object clientId) {
+        return "benefit4j-it" + TenantAuthTemplate.FAIL_KEY_PREFIX + clientId;
+    }
 
     private String sessionKey(UbmaTenant tenant, String type) {
         String hash = fun.commons.framework4j.accesstoken.util.TokenUtils.calculateKeyHash(
@@ -51,26 +59,25 @@ public class TenantSecurityIT extends BaseMapperTest {
     public void bruteForceProtection_locksAfterFiveFailures() {
         UbmaTenant t = createTenant();
         String clientId = String.valueOf(t.getId());
-        String lockKey = "benefit4j:auth:fail:" + clientId;
-        redis.delete(lockKey);
+        redis.delete(failKey(clientId));
 
         // ① 正确凭据先成功一次(清零路径)
-        Object ok = authService.postToken("client_credentials", clientId, t.getTenantSecret());
-        assertThat(((ApiResponse<?>) ok).getCode()).isZero();
-        assertThat(redis.hasKey(lockKey)).isFalse();
+        ApiResponse<?> ok = authTemplate.postToken("client_credentials", clientId, t.getTenantSecret());
+        assertThat(ok.getCode()).isZero();
+        assertThat(redis.hasKey(failKey(clientId))).isFalse();
 
         // ② 连续 5 次失败
         for (int i = 0; i < 5; i++) {
-            Object fail = authService.postToken("client_credentials", clientId, "wrong-secret-" + i);
-            assertThat(((ApiResponse<?>) fail).getCode()).isEqualTo(401);
+            ApiResponse<?> fail = authTemplate.postToken("client_credentials", clientId, "wrong-secret-" + i);
+            assertThat(fail.getCode()).isEqualTo(401);
         }
 
         // ③ 第 6 次即使凭据正确也被锁(429)
-        Object locked = authService.postToken("client_credentials", clientId, t.getTenantSecret());
-        assertThat(((ApiResponse<?>) locked).getCode()).isEqualTo(429);
-        assertThat(redis.hasKey(lockKey)).isTrue();
+        ApiResponse<?> locked = authTemplate.postToken("client_credentials", clientId, t.getTenantSecret());
+        assertThat(locked.getCode()).isEqualTo(429);
+        assertThat(redis.hasKey(failKey(clientId))).isTrue();
 
-        redis.delete(lockKey);   // 清理,不影响其他用例
+        redis.delete(failKey(clientId));   // 清理,不影响其他用例
     }
 
     @Test
@@ -87,15 +94,14 @@ public class TenantSecurityIT extends BaseMapperTest {
         String oldSecret = t.getTenantSecret();
 
         // reset-secret → 存量会话全部撤销
-        Object resp = platformService.postTenantsTenantIdSecret(t.getId());
-        assertThat(((ApiResponse<?>) resp).getCode()).isZero();
+        ApiResponse<?> resp = (ApiResponse<?>) platformService.postTenantsTenantIdSecret(t.getId());
+        assertThat(resp.getCode()).isZero();
         assertThat(redis.hasKey(sessionKey(t, "APP"))).isFalse();
         assertThat(redis.hasKey(sessionKey(t, "OPS"))).isFalse();
 
         // 宽限期(§5.5): 旧密钥在 24h 内仍可换 token(双版本过渡)
-        Object grace = authService.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
-        assertThat(((ApiResponse<?>) grace).getCode())
-                .as("宽限期内旧密钥应可用").isZero();
+        ApiResponse<?> grace = authTemplate.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
+        assertThat(grace.getCode()).as("宽限期内旧密钥应可用").isZero();
     }
 
     @Test
@@ -110,32 +116,25 @@ public class TenantSecurityIT extends BaseMapperTest {
             stmt.execute("UPDATE ubma_tenant SET tenant_secret_prev_at = now() - interval '25 hours' "
                     + "WHERE id = " + t.getId());
         }
-        Object expired = authService.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
-        assertThat(((ApiResponse<?>) expired).getCode())
-                .as("宽限期外旧密钥应拒绝").isEqualTo(401);
+        ApiResponse<?> expired = authTemplate.postToken("client_credentials", String.valueOf(t.getId()), oldSecret);
+        assertThat(expired.getCode()).as("宽限期外旧密钥应拒绝").isEqualTo(401);
 
         // 新密钥不受影响 —— 从 reset 响应拿不到(上个调用),重取
         UbmaTenant fresh = tenantMapper.selectById(t.getId());
-        Object freshOk = authService.postToken("client_credentials", String.valueOf(t.getId()), fresh.getTenantSecret());
-        assertThat(((ApiResponse<?>) freshOk).getCode()).isZero();
-        redis.delete("benefit4j:auth:fail:" + t.getId());
+        ApiResponse<?> freshOk = authTemplate.postToken("client_credentials",
+                String.valueOf(t.getId()), fresh.getTenantSecret());
+        assertThat(freshOk.getCode()).isZero();
+        redis.delete(failKey(t.getId()));
     }
 
     @Test
-    public void platformIdentity_cannotActAsTenant() {
-        // §6.2 L1 语义: 平台身份(tenant_id=0)是管理面,不是记账主体 ——
-        // 打租户域/资金域 controller 的身份守卫应拒绝(否则账记到 tenant_id=0 幽灵租户)
-        fun.commons.framework4j.accesstoken.context.TokenContext.set("APP", java.util.Map.of("tenant_id", 0L));
-        try {
-            org.assertj.core.api.Assertions.assertThatThrownBy(
-                            fun.commons.benefit4j.security.TenantIdentityGuard::requireTenant)
-                    .isInstanceOf(SecurityException.class);
-            org.assertj.core.api.Assertions.assertThatCode(
-                            fun.commons.benefit4j.security.PlatformIdentityGuard::requirePlatform)
-                    .doesNotThrowAnyException();   // 平台身份在平台域仍放行(同一 claim,两面守卫)
-        } finally {
-            fun.commons.framework4j.accesstoken.context.TokenContext.clear();
-        }
+    public void platformCredentials_issueSyntheticPlatformToken() {
+        // 平台凭据(it yml framework4j.tenant.platform.*)→ 合成平台租户 tenant_id=0
+        ApiResponse<?> resp = authTemplate.postToken("client_credentials", "PLATFORM", "platform-secret-it");
+        assertThat(resp.getCode()).isZero();
+        String hash = fun.commons.framework4j.accesstoken.util.TokenUtils.calculateKeyHash("0", "salt");
+        assertThat(redis.hasKey("benefit4j-it:accesstoken:APP:" + hash))
+                .as("平台 token 会话 key(tenant_id=0)").isTrue();
     }
 
     @Test
@@ -160,12 +159,21 @@ public class TenantSecurityIT extends BaseMapperTest {
             rs.next();
             assertThat(rs.getInt(1)).isEqualTo(6);
         }
-        // 零行为验证: 当前 admin 连接(表 owner/superuser)不受 RLS 限制
+    }
+
+    @Test
+    public void tenantContractColumns_v142() throws Exception {
+        // V1.4.2: 契约列补齐(framework4j-tenant §3.1) —— email/channel/privileges/config/oem
         try (var conn = AssetsMigrations.open();
              var stmt = conn.createStatement();
-             var rs = stmt.executeQuery("SELECT count(*) FROM ubmx_account")) {
+             var rs = stmt.executeQuery(
+                 "SELECT string_agg(column_name, ',') FROM information_schema.columns "
+                 + "WHERE table_name='ubma_tenant' AND column_name IN "
+                 + "('email','channel','privileges','config','oem','tenant_secret_prev','tenant_secret_prev_at')")) {
             rs.next();
-            assertThat(rs.getLong(1)).isGreaterThanOrEqualTo(0);
+            String cols = rs.getString(1);
+            assertThat(cols).contains("email", "channel", "privileges", "config", "oem",
+                    "tenant_secret_prev", "tenant_secret_prev_at");
         }
     }
 }

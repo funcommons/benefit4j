@@ -66,6 +66,20 @@ framework4j:
     sql-tracing:
       enabled: true
       mode: ALL        # DISABLED / WRITE_ONLY / ALL
+  tenant:
+    enabled: true
+    table-prefix: ubma_             # 租户表 = ubma_tenant(项目简码规范;Flyway 管结构 → PROVIDED)
+    ddl-mode: PROVIDED
+    auth:
+      path: /benefit/api/v1/auth/token
+      token-type: APP                # 兼容存量会话(§6 P2;P4 观察期后切 TENANT)
+      expire-seconds: 7200           # 与 access-token APP policy 一致(2h)
+    platform:
+      client-id: ${PLATFORM_CLIENT_ID:PLATFORM}
+      client-secret: ${PLATFORM_CLIENT_SECRET:fvUQ54yPgrMg2v2X}
+    secret:
+      grace-hours: 24                # 密钥轮换宽限期(§5.5)
+
   access-token:
     enabled: true
     redis-name: default
@@ -143,10 +157,6 @@ framework4j:
     whitelist-paths: ["/benefit/api/v1/auth/token"]
 
 benefit4j:
-  security:
-    platform:
-      client-id: ${PLATFORM_CLIENT_ID:PLATFORM}
-      client-secret: ${PLATFORM_CLIENT_SECRET:fvUQ54yPgrMg2v2X}
   migration:
     tenant-secret-encrypt: true   # 临时开启, 迁移完关闭
 

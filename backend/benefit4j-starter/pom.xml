@@ -17,6 +17,13 @@
             <artifactId>spring-retry</artifactId>
         </dependency>
 
+        <!-- framework4j 租户横切面(三域守卫/认证端点/密钥生命周期/注册码) -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-tenant</artifactId>
+            <version>${framework4j.version}</version>
+        </dependency>
+
         <!-- framework4j SDK All -->
         <dependency>
             <groupId>com.github.funcommons.framework4j</groupId>
