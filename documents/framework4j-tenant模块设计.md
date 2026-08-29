@@ -121,9 +121,9 @@ framework4j:
 
 | 阶段 | 动作 | 风险 |
 |---|---|---|
-| P1 | framework4j v1.5.0 发布模块(不含 benefit4j 改动) | 零 |
-| P2 | benefit4j 升依赖,删自有 guard/auth/secret 实现,controller 换 `@PlatformDomain`/`@TenantDomain`;写 `BenefitTenant extends TenantEntity` + Mapper 两文件注册 SPI(`table-prefix: ubma_` 直接映射现有表,**零数据迁移**);`token-type: APP` 兼容存量 | 低:全量 IT+smoke 回归;无数据迁移 |
-| P3 | 接入 tenant-tck;前端无感(token 透传) | 低 |
+| P1 | framework4j v1.5.1 发布模块(含端点参数容错修复) | 零 | ✅ tag v1.5.1,JitPack 已构建 |
+| P2 | benefit4j 升依赖接入(`47579b9`)——UbmaTenant extends TenantEntity、V1.4.2 补契约列、删双守卫+认证三件套换注解/内置端点、reset 委托 TenantSecretService | ✅ starter 279 + IT 148 + smoke 4 全绿 |
+| P3 | 接入 tenant-tck(`11e6f89`)——TenantComplianceIT 结构断言 T1-T3,IT 156 全绿 | ✅ |
 | P4 | 观察一个版本后删兼容开关(token-type 切 TENANT,存量 token 失效窗口公告) | 低 |
 
 ## 7. 实施计划(framework4j 仓,7 步,每步独立可交付)
@@ -139,7 +139,7 @@ framework4j:
 | 7 | tenant-tck test-jar(结构 T1-T3 可跑,行为 T4-T8 项目触发)+ README 全绿 | 1d | tck 编译过 + benefit4j 试接入 | ✅ `0b7f097` |
 | — | **合计** | **~5.5d** | 打 tag v1.5.0 → JitPack | **7/7 完成,56 测试全绿** |
 
-> **P1 待办**:framework4j 打 tag `v1.5.0`(含 tenant 模块)→ benefit4j 升依赖接入(P2)。
+> **P1/P2/P3 已完成**(framework4j v1.5.1 已发布至 JitPack;benefit4j 已接入并跑通 tck)。剩 P4:观察一个版本后 `token-type` 切 TENANT(存量 token 失效窗口需公告)。
 
 ## 8. 风险与对策
 
