@@ -1,0 +1,5 @@
+# JitPack 构建配置: 默认 JDK 8 跑不动 Spring Boot 3.x(--release 报错), 显式 JDK 17
+jdk:
+  - openjdk17
+install:
+  - mvn install -DskipTests
