@@ -2,7 +2,13 @@
 
 本文件记录 benefit4j（用户权益中台）的版本演进。
 
-## [未发布] 2026-09-17
+## [2.0.0] - 2026-09-17
+
+⚠️ **含破坏性变更**: 术语彻改 app→tenant(API/DB/JWT claim 全链路重命名,见下「变更 — 术语彻改」)。
+
+### 新增 — assets 资产域(P1/P2 全量)
+
+继权益域后的第二记账域: 六表 DDL + 复式记账引擎(O10/O11/O12)+ TCC 三阶段(reserve/commit/release)+ 过期回收 + runtime/ops 端点;P2 收官 DUAL 双账户原子扣、EXCHANGE 兑换、业务冻结 freeze/unfreeze、limit_policy 反洗钱限额、T+1 对账/快照/差错池、outbox 事件、幂等释放、F1 授信(B7);四层测试 + 并发/混合负载压测 + 运营前端(C1-C4)。设计见 documents/assets-design.md + ADR-0008/0009。
 
 ### 新增 — 控制台入 starter classpath,单部署物(issue #6)
 
@@ -16,9 +22,7 @@
 - **验收口径修正**(原标准 3): `mvn package -Pwith-frontend` 产出含最新前端的 jar 并刷新入库产物;裸 `mvn package` 打包已入库产物
 - **回归**: 后端 449/449(IT 含 smoke + 单测,新增 fallback 11 例);前端 build(vue-tsc + vite)绿、vitest 非 sdk 262 绿(sdk 79 为既有红基线,禁区不动);真进程验证 9200 六项全过(`/` 出控制台、深链接 200、API/认证/静态资源 404 语义、build-manifest 可查)
 
-## [未发布] 2026-08-28
-
-### 变更 — 术语彻改:应用(app) → 租户(tenant)
+### 变更 — 术语彻改:应用(app) → 租户(tenant)(破坏性)
 
 零业务规则变更的纯重命名(趁零外部接入方窗口完成,API 为破坏性变更):
 
@@ -28,6 +32,29 @@
 - **前端**: `Apps.vue`→`Tenants.vue`、路由 `/apps`→`/tenants`、i18n 全量「应用」→「租户」
 - **不变**: token 型别 APP/OPS(技术角色)、`PLATFORM_CLIENT_ID/SECRET`(平台凭据)、`client_id/client_secret`(OAuth 参数)、`@OpenId`
 - **回归**: 后端 421/421(IT 146 含 smoke 4 + 单测 279)、前端 typecheck/build/vitest 基线一致;真实进程验证 `/platform/tenants` CRUD + smoke 4/4
+
+### 安全 — 租户安全批(3 批)
+
+- **批1**: P0 平台域越权缺口修复 + reset 撤销会话 + 换 token 防爆破
+- **批2**: 密钥轮换宽限期(双版本并行)+ 账本表 RLS 就位
+- **批3**: 控制台 token 迁 sessionStorage(降 XSS 持久化面)
+- 平台身份(tenant_id=0)不可作为记账主体(中间件租户设计 v2.1 L1 语义落地)
+
+### 变更 — framework4j-tenant 接入(删自有实现)
+
+删除自有租户守卫/认证实现,接入 framework4j-tenant v1.5.1(三域守卫/认证端点/密钥生命周期/注册码),零数据迁移;接入 framework4j-tenant-tck 合规测试(TenantComplianceIT T1-T3)。
+
+### 升级 — framework4j v1.2.9 → v1.5.1
+
+逐版升级(v1.3.2 / v1.4.0 / v1.4.2 / v1.5.1);接入 tracelog 动态追踪日志;通用能力回贡献 framework4j(v1.2.9)。
+
+### 修复
+
+- 平台登录→资产运营页 401(端点拆 platform/ops 两面)+ 未知路径 404 + 人工验收文档
+- assets 端点未进签名/限流拦截器覆盖(P1 安全缺口)
+- 限额日界时区 bug(单测抓出)
+- BenefitSetEditor confirm 无法提交;修 9 个既有 TS 错误,typecheck 全绿
+- 前端纯化: 清理 aigc fork 遗留
 
 ### 修复 — 测试基建
 

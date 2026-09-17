@@ -1,0 +1,1 @@
+import{f as s}from"./index-Beg_AXgH.js";const n=t=>s.get("benefit/api/v1/tenant/subscriptions",{params:t}),r=t=>s.get("benefit/api/v1/platform/subscriptions",{params:t}),o=(t,i)=>s.get(`benefit/api/v1/tenant/subscriptions/${t}/items`,{params:i}),p=(t,i)=>s.get(`benefit/api/v1/platform/subscriptions/${t}/items`,{params:i});export{p as a,o as b,n as l,r as p};
