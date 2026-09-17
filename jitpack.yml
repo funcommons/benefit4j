@@ -2,4 +2,5 @@
 jdk:
   - openjdk17
 install:
-  - mvn install -DskipTests
+  # 显式 -f: pom 在 backend/ 子目录(仓根无 pom), 显式 install 会覆盖 JitPack 默认的 pom 探测
+  - mvn -f backend/pom.xml install -DskipTests
