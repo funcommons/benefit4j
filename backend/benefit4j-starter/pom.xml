@@ -78,4 +78,101 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <!-- 入库说明文件随 git 跟踪但不进 jar(避免 /README.md 对外可下载) -->
+                <excludes>
+                    <exclude>static/README.md</exclude>
+                </excludes>
+            </resource>
+        </resources>
+    </build>
+
+    <profiles>
+        <!--
+          前端产物构建入库 (issue #6 方案 1: dist 产物入库)。
+          默认不激活 —— JitPack/CI/裸 mvn package 只打包已入库的 src/main/resources/static/,零 node 依赖。
+          发版时本地激活: mvn -pl benefit4j-starter -am -Pwith-frontend package(或 bin/build-frontend.sh),
+          产物刷新后随版本提交入库。
+        -->
+        <profile>
+            <id>with-frontend</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.15.0</version>
+                        <configuration>
+                            <!-- node/pnpm 装进 target(gitignore 内),不污染 frontend/ 工作区 -->
+                            <installDirectory>${project.build.directory}/node</installDirectory>
+                            <workingDirectory>${project.basedir}/../../frontend</workingDirectory>
+                            <nodeVersion>v20.18.0</nodeVersion>
+                            <!-- 对齐 frontend/package.json 的 packageManager 字段 -->
+                            <pnpmVersion>9.12.0</pnpmVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-node-and-pnpm</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>install-node-and-pnpm</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>pnpm-install</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>pnpm</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>install --frozen-lockfile</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>pnpm-build</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>pnpm</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- build = vue-tsc -b && vite build (自带 typecheck) -->
+                                    <arguments>build</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>refresh-static</id>
+                                <!-- 同 phase 声明序在 frontend-maven-plugin 之后;process-resources 阶段 resources 插件再把 static 打进 jar -->
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <!-- 清旧产物(保留 README.md 说明文件)→ 拷新产物 → 写构建指纹 -->
+                                        <delete>
+                                            <fileset dir="${project.basedir}/src/main/resources/static" includes="**/*" excludes="README.md"/>
+                                        </delete>
+                                        <copy todir="${project.basedir}/src/main/resources/static">
+                                            <fileset dir="${project.basedir}/../../frontend/dist"/>
+                                        </copy>
+                                        <echo file="${project.basedir}/src/main/resources/static/build-manifest.json">{"version":"${project.version}","builtAt":"${maven.build.timestamp}"}</echo>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
