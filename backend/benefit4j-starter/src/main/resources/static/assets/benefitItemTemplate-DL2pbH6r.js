@@ -1,1 +1,0 @@
-import{f as t}from"./index-h10vqzuC.js";const p=e=>t.get("benefit/api/v1/platform/item-templates",{params:e}),r=e=>t.post("benefit/api/v1/platform/item-templates",e),i=(e,a)=>t.put(`benefit/api/v1/platform/item-templates/${e}`,a),l=e=>t.delete(`benefit/api/v1/platform/item-templates/${e}`);export{r as c,l as d,p as g,i as u};

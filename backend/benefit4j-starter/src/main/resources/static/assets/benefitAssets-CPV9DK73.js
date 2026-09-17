@@ -1,0 +1,1 @@
+import{f as t}from"./index-Col3AZVH.js";const a=s=>t.get("benefit/api/v1/platform/assets",{params:s}),r=s=>t.post("benefit/api/v1/platform/assets",s),n=s=>t.post(`benefit/api/v1/platform/assets/${s}/suspend`),o=s=>t.post(`benefit/api/v1/platform/assets/${s}/resume`),p=s=>t.get("benefit/api/v1/platform/assets/postings",{params:s});export{p as a,r as c,a as g,o as r,n as s};
