@@ -14,12 +14,12 @@
 
 家族前端部署统一化裁决落地(对齐 lotask4j#4 / token-hub#14,家族首个实现):
 
-- **产物入库(方案 1)**: 前端构建产物提交进 `benefit4j-starter/src/main/resources/static/`(git 跟踪,~8.4MB);JitPack/裸 `mvn package`/CI 只打包已入库产物,**零 node 依赖**;发版期 `bin/build-frontend.sh`(= `mvn -pl benefit4j-starter -am -Pwith-frontend package`)刷新产物随版本提交,`--check` 模式按 git 提交时间防 stale
+- **产物入库(方案 1)**: 前端本机构建(`bin/build-frontend.sh`: pnpm install/build → 拷贝 → 写构建指纹),产物提交进 `benefit4j-starter/src/main/resources/static/`(git 跟踪,~8.4MB);JitPack/裸 `mvn package`/CI 只打包已入库产物,**零 node 依赖**;`--check` 模式按 git 提交时间防 stale
 - **SPA fallback**: `Benefit4jConsoleAutoConfiguration` + `PathResourceResolver`——真实静态资源优先;未命中仅对非 API 前缀 GET fallback 到 `index.html`;排除前缀默认 `/benefit/api/`、`/api/`、`/open/`、`/actuator`、`/error`(含 framework4j-tenant 认证端点),`benefit4j.console.fallback-excludes` 可配;末段带扩展名的路径不吞(静态资源 404 语义)
 - **开关**: `benefit4j.console.enabled` 默认 **true**(家族终态口径,壳零配置;消费方可关闭或声明自有 configurer bean 覆盖);产物缺失时 fallback 自然失效返回 404
 - **构建指纹**: `build-manifest.json` 随产物生成(version + builtAt),`GET /build-manifest.json` 可查
 - **前端零改动**: `BASE_URL=''` 相对路径天然同源;dev vite 热更/proxy 路径不动
-- **验收口径修正**(原标准 3): `mvn package -Pwith-frontend` 产出含最新前端的 jar 并刷新入库产物;裸 `mvn package` 打包已入库产物
+- **验收口径修正**(原标准 3): 发版期跑 `bin/build-frontend.sh` 产出含最新前端的入库产物再打包;裸 `mvn package` 打包已入库产物
 - **回归**: 后端 449/449(IT 含 smoke + 单测,新增 fallback 11 例);前端 build(vue-tsc + vite)绿、vitest 非 sdk 262 绿(sdk 79 为既有红基线,禁区不动);真进程验证 9200 六项全过(`/` 出控制台、深链接 200、API/认证/静态资源 404 语义、build-manifest 可查)
 
 ### 变更 — 术语彻改:应用(app) → 租户(tenant)(破坏性)

@@ -1,1 +1,0 @@
-import{f as t}from"./index-Beg_AXgH.js";const i=e=>t.get("benefit/api/v1/tenant/benefit-sets",{params:e}),a=e=>t.post("benefit/api/v1/tenant/benefit-sets",e),f=(e,n)=>t.put(`benefit/api/v1/tenant/benefit-sets/${e}`,n),r=e=>t.delete(`benefit/api/v1/tenant/benefit-sets/${e}`),b=e=>t.get("benefit/api/v1/platform/benefit-sets",{params:e});export{i as a,a as c,r as d,b as g,f as u};

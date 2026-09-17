@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# 前端产物构建入库脚本 (issue #6 方案 1: dist 产物入库)
+# 前端产物构建入库脚本 (issue #6 方案 1: 前端本地 build,产物进 git)
 #
 # 用法:
-#   bin/build-frontend.sh          构建前端 → 刷新 starter 入库产物 → 提示提交
+#   bin/build-frontend.sh          本机构建前端 → 刷新 starter 入库产物 → 提示提交
 #   bin/build-frontend.sh --check  防 stale 校验: frontend 源码晚于入库产物提交则失败 (供 CI/本地自查)
 #
-# 背景: 消费方走 JitPack (com.github 坐标) 源码构建, JitPack 无 node 环境,
-# 故构建产物提交进 git (backend/benefit4j-starter/src/main/resources/static/),
-# 默认构建零 node 依赖; 本脚本只在发版期本地运行。
+# 背景: 消费方经 JitPack/本地库拿到的 starter jar 只含已入库产物,构建链零 node 依赖;
+# 前端构建只发生在发版期本机(pnpm 用本机环境,不经 maven)。
 set -euo pipefail
 
 BACKEND_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "$BACKEND_DIR/.." && pwd)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
 STATIC_REL="backend/benefit4j-starter/src/main/resources/static"
+STATIC_DIR="$REPO_ROOT/$STATIC_REL"
 
 if [[ "${1:-}" == "--check" ]]; then
   # 产物含构建时间戳 (vite define __BUILD_TIME__), 非可复现构建, 字节 diff 无意义;
@@ -32,8 +33,17 @@ if [[ "${1:-}" == "--check" ]]; then
   exit 0
 fi
 
-echo "== 构建前端并刷新入库产物 (-Pwith-frontend) =="
-(cd "$BACKEND_DIR" && mvn -pl benefit4j-starter -am -Pwith-frontend package -DskipTests)
+echo "== 本机构建前端 (pnpm install + build) =="
+(cd "$FRONTEND_DIR" && pnpm install --frozen-lockfile && pnpm build)
+
+echo "== 刷新入库产物 → $STATIC_REL =="
+# 清旧产物(保留 README.md 说明文件),拷贝新产物
+rsync -a --delete --exclude='README.md' "$FRONTEND_DIR/dist/" "$STATIC_DIR/"
+
+# 构建指纹(版本号取自 backend/pom.xml 的 benefit4j-parent)
+VERSION="$(grep -A1 '<artifactId>benefit4j-parent</artifactId>' "$BACKEND_DIR/pom.xml" | grep -o '<version>[^<]*' | head -1 | sed 's/<version>//')"
+printf '{"version":"%s","builtAt":"%s"}\n' "$VERSION" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$STATIC_DIR/build-manifest.json"
+echo "build-manifest.json: $(cat "$STATIC_DIR/build-manifest.json")"
 
 echo
 echo "== 入库产物变更 =="
