@@ -39,6 +39,8 @@ echo "== 本机构建前端 (pnpm install + build) =="
 echo "== 刷新入库产物 → $STATIC_REL =="
 # 清旧产物(保留 README.md 说明文件),拷贝新产物
 rsync -a --delete --exclude='README.md' "$FRONTEND_DIR/dist/" "$STATIC_DIR/"
+# 权限归一: vite/pnpm 产物可能带可执行位,git 树里统一 644
+find "$STATIC_DIR" -type f -exec chmod 644 {} +
 
 # 构建指纹(版本号取自 backend/pom.xml 的 benefit4j-parent)
 VERSION="$(grep -A1 '<artifactId>benefit4j-parent</artifactId>' "$BACKEND_DIR/pom.xml" | grep -o '<version>[^<]*' | head -1 | sed 's/<version>//')"
